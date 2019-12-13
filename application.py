@@ -245,10 +245,17 @@ class Villager():
 			# Then, create positive, neutral negative descriptions and dialogue
 			# Ex - negative "She smells like a nasty, old whore" - nasty, whore = negative, old = neutral
 			# Ex - positive "He looks like a cheery, old friend "
-			verb_list = ['looks', 'smells', 'sounds']
-			adj_list1 = ['nasty','angry','kind','chubby','obedient','scary']
-			adj_list2 = ['old', 'young']
-			noun_list = ['devil','skank', 'friend', 'whore', 'tool']
+			desc_type = random.choice([1,2])
+			if desc_type == 1:
+				verb_list = ['looks', 'smells', 'stinks']			
+				adj_list1 = ['nasty','angry','scary']
+				adj_list2 = ['dirty','filthy','scabbies-ridden','toothless','old','cold']
+				noun_list = ['devil','skank','whore', 'tool','beggar']
+			elif desc_type == 2:
+				verb_list = ['looks','sounds']
+				adj_list1 = ['kind','beautiful','friendly','intelligent','young','old']
+				adj_list2 = ['warm','observant','upright','modest','vibrant','hard-working']
+				noun_list = ['angel','saint','citizen','scholar','professional']
 			verb = random.choice(verb_list)
 			adj1 = random.choice(adj_list1)
 			adj2 = random.choice(adj_list2)
@@ -275,8 +282,8 @@ class Item():
 
 def main():
 	world = World()
-	world.thing_gen((0,0),Villager)
-	world.thing_gen((0,0),Villager)
+	for i in range(10):
+		world.thing_gen((0,0),Villager)
 	# world.update()
 	print(world.env.get_description())
 
