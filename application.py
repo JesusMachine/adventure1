@@ -18,7 +18,8 @@ class World(): # Global Container
 		world_map = {}
 		for i in range(m):
 			for j in range(n):
-				world_map[(i,j)]=None
+				env_type = 	random.choice(['village','desert','forest'])			
+				world_map[(i,j)] = Environment(env_type)
 		return world_map
 	def place_gen(self,location,env_type): # Creates an environment in a world location
 		self.map[location] = Environment(env_type)
@@ -72,8 +73,8 @@ class World(): # Global Container
 				pass
 			pass
 	def update(self): # Updates all environments
-		for values in self.map:
-			values.update()
+		for value in self.map.values():
+			value.update()
 		pass
 
 
@@ -134,7 +135,7 @@ class Player(): # Player resides in world, NOT environment
 				self.stats[key] += random.randint(0,2)
 	def create_description(self):
 		# TODO description will be based on current hp out of max hp for level
-		self.description = None
+		self.description = 'None'
 	def update(self):
 		create_description()
 		#TODO
@@ -155,8 +156,8 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 			desc_list1 = ['lush,', 'quiet,', 'peaceful,', 'solumn,', 'eerie,', 'cold,', 'bright,', 'dark,', 'thick,', 'haunted,', 'creepy,']
 			desc_list2 = ['green', 'dead', 'burned', 'bare','mountainous']
 		elif self.name == 'village': # TODO
-			desc_list1 = []
-			desc_list2 = []
+			desc_list1 = ['giant']
+			desc_list2 = ['dirty']
 			pass
 		elif self.name == 'desert':
 			desc_list1 = ['arid,', 'cold,', 'hot,', 'flat,']
@@ -245,31 +246,36 @@ class Villager():
 			# Then, create positive, neutral negative descriptions and dialogue
 			# Ex - negative "She smells like a nasty, old whore" - nasty, whore = negative, old = neutral
 			# Ex - positive "He looks like a cheery, old friend "
-			desc_type = random.choice([1,2])
-			if desc_type == 1:
+			self.desc_type = random.choice(['bad','good'])
+			if self.desc_type == 'bad':
 				verb_list = ['looks', 'smells', 'stinks']			
 				adj_list1 = ['nasty','angry','scary']
 				adj_list2 = ['dirty','filthy','scabbies-ridden','toothless','old','cold']
 				noun_list = ['devil','skank','whore', 'tool','beggar']
-			elif desc_type == 2:
+			elif self.desc_type == 'good':
 				verb_list = ['looks','sounds']
 				adj_list1 = ['kind','beautiful','friendly','intelligent','young','old']
 				adj_list2 = ['warm','observant','upright','modest','vibrant','hard-working']
 				noun_list = ['angel','saint','citizen','scholar','professional']
 			verb = random.choice(verb_list)
-			adj1 = random.choice(adj_list1)
-			adj2 = random.choice(adj_list2)
+			self.adj1 = random.choice(adj_list1)
+			self.adj2 = random.choice(adj_list2)
 			noun = random.choice(noun_list)
-			if re.match(r'[aeiou]',adj1[0]):
+			if re.match(r'[aeiou]',self.adj1[0]):
 				prefix = 'an'
 			else:
 				prefix = 'a'
-			self.description = pronoun + ' ' + verb + ' like' + ' ' + prefix + ' ' + adj1 + ', ' + adj2 + ' ' + noun
+			self.description = pronoun + ' ' + verb + ' like' + ' ' + prefix + ' ' + self.adj1 + ', ' + self.adj2 + ' ' + noun
+			self.description2 = self.adj1 + ', ' + self.adj2 + ' ' + noun
 		else:
 			pass # TODO make description of blood or messed up corpse
 	def create_dialogue(self): # If positive, also add probability for a tip (tells you what is to the north/east/west/south)
-		intro_list = ["Hi! I'm "]
-		outro_list = ["It's nice to meet you!"]
+		if self.desc_type == 'good':
+			intro_list = ["Hi! I'm ","Why, hello! My name is ","Good Day! The name is "]
+			outro_list = ["It's nice to meet you!", "Splended to make your aquaintance!", "Fantastic to meet you."]
+		elif self.desc_type == 'bad':
+			intro_list = ["wudaya want? *Spit* You can call me ","You keep staring and Imma hit ya. I'm "]
+			outro_list = ['Hope the back looks better than the front!',"Don't talk to me no more!"]
 		introduction = random.choice(intro_list)
 		outro = '. ' + random.choice(outro_list)
 		self.dialogue = introduction + self.name + outro
@@ -277,6 +283,8 @@ class Villager():
 	def update(self):
 		if self.stats['hp'] == 0:
 			self.is_alive = False
+			self.description = "While they once looked " + self.adj1 + " and " + self.adj2 + ", now you see a pile of organs, blood and meat. Perhaps some teeth."
+			self.dialogue = "You talk to the bloody corpse, but it says nothing back."
 class Item():
 	pass
 
@@ -286,6 +294,10 @@ def main():
 		world.thing_gen((0,0),Villager)
 	# world.update()
 	print(world.env.get_description())
+	print(world.env.contents[0].dialogue)
+	world.env.contents[0].stats['hp']=0
+	world.update()
+	print(world.env.contents[0].description)
 
 
 
@@ -296,6 +308,11 @@ if __name__ == '__main__':
 
 
 ## EXAMPLES LISTS ##
+
+# world.env.contents[0].stats['hp']=0  # Setting object hp to 0
+
+
+
 # print(world.env.description)
 
 # print(world.map[(0,0)].description)
