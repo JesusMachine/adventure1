@@ -63,14 +63,67 @@ class World(): # Global Container
 		if not start_game:
 			player = Player('Jim')
 		pass
+	def inspect(self):
+		#TODO print description of object being inspected
+		pass
+	def attack(self, object):
+		#TODO turns on is_inbattle flag for player and object, calculates hp losses and prints results
+		pass
+	def talk(self, object):
+		#TODO activates brief discussion
+		pass
+	def inventory(self):
+		#TODO prints items in players inventory
+		pass
+	def move(self, where):
+		#TODO moves player to new location if it exists and if not in battle. If not, states there are mountains there. If in battle, calculates chances to run based on speed. ALSO adds 1 to time if successful.
+		pass
+	def use(self,item):
+		#TODO activate item if it exists in players inventory
+		pass
 	def get_input(self): # Basic Input System (Reader). Will eventually need while loop (which will check if player.alive)
 		while self.player.alive:
-			if self.player.is_inbattle:
+			if self.player.is_inbattle: # one action per turn (attack, attempt to move, or use), monster attacks after players turn
+				action_dict = {
+				"attack":self.attack,
+				"move":self.move,
+				"use":self.use
+				}
+				# TODO add battle help menu - see help_menu()
 				# TODO Battle options (attack or try to run)
 				pass
 			else:
-				# TODO normal choices
-				pass
+				action_dict = {
+				"inspect":self.inspect,
+				"attack":self.attack,
+				"talk":self.talk,
+				"inventory":self.inventory,
+				"move":self.move,
+				"use":self.use
+				}
+				action_flag = True
+				name_list = [x.name for x in self.env.contents]
+				while action_flag:
+					print('What do you do?')
+					cmd = input(": ").lower().split()
+					action_word = cmd[0]
+					if (len(cmd)>=2) and (action_word in action_dict):
+						noun = cmd[1::]
+						action_flag = False
+					elif action_word == "help":
+						self.help_menu()
+					elif (len(cmd)<2) and (action_word in action_dict):
+						print("What do you want to {}?".format(cmd[0])) #TODO change to writer output
+						noun = input(": ").lower().split()
+						action_flag = False
+					else:
+						# TODO Change to writer output
+						print("{} is an unknown action.".format(action_word))
+						print("Please enter a valid action.")
+					if noun in name_list: # TODO add player inventory to search (for use)
+						action_dict[action_word](noun)
+					else:
+						print("There is no " + noun + " here.") #TODO change to writer output
 			pass
 	def update(self): # Updates all environments
 		for value in self.map.values():
