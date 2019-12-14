@@ -68,25 +68,28 @@ class World(): # Global Container
 	def battlehelp_menu(self):
 		#TODO
 		pass
-	def get_input(self): # Basic Input System (Reader).
-		while self.player.alive:
+	def get_input(self): # Basic Input System (Reader). # TODO Test ALL Features
+		while self.player.alive: # TODO need way to exit battle 
+								 # (set self.player.is_inbattle and self.player.battle_opponent to False)
 			action_dict = {
 			"inspect":self.inspect,
 			"attack":self.attack,
 			"talk":self.talk,
 			"inventory":self.inventory,
 			"move":self.move,
-			"use":self.use
+			"use":self.use,
+			"help": help_menu
 			}
 			if self.player.is_inbattle: # Remove certain choices (and change help menu) if in battle
-				del action_dict['talk'] # TODO later implement
+				del action_dict['talk']
 				help_menu = self.battlehelp_menu
+				name_list = [self.player.battle_opponent]
 			else:
 				help_menu = self.help_menu
 				name_list = [x.name for x in self.env.contents]
 			action_flag = True
 			while action_flag:
-				print('What do you do?')
+				self.writer.msg_slow('What do you do?')
 				cmd = input(": ").lower().split()
 				action_word = cmd[0]
 				if (len(cmd)>=2) and (action_word in action_dict):
@@ -98,17 +101,19 @@ class World(): # Global Container
 					#TODO print self.player.inventory
 					pass
 				elif (len(cmd)<2) and (action_word in action_dict):
-					print("What do you want to {}?".format(cmd[0])) #TODO change to writer output
+					self.writer.msg_slow("What do you want to {}?".format(cmd[0]))
 					noun = input(": ").lower().split()
 					action_flag = False
 				else:
 					# TODO Change to writer output
-					print("{} is an unknown action.".format(action_word))
-					print("Please enter a valid action.")
+					self.writer.msg_slow("{} is an unknown action.".format(action_word))
+					self.writer.msg_slow("Please enter a valid action.")
 				if noun in name_list: # TODO add player inventory to search (for use)
 					action_dict[action_word](noun)
 				else:
-					print("There is no " + noun + " here.") #TODO change to writer output
+					if self.player.is_inbattle:
+						self.writer.msg_slow("You can only interact with " + self.player.battle_opponent + " while fighting.")
+					self.writer.msg_slow("There is no " + noun + " here.")
 			pass
 		if not self.player.alive:
 			#GAME OVER!!
@@ -176,9 +181,11 @@ class Player(): # Player resides in world, NOT environment
 
 		pass
 	def attack(self, object):
-		#TODO turns on is_inbattle flag for player and object, calculates hp losses and prints results
+		#TODO Need to make way such that only player and object can interact until 1.) one dies, or 2.) player moves and escapes (player.speed>object.speed)
+		# This should be accomplished in world.get_input()
 		self.is_inbattle = True
 		object.is_inbattle = True
+		self.battle_opponent = object
 		p_hit = self.speed = self.speed / (object.speed + self.speed)
 		p_gethit = 1 - p_hit
 		hploss_give = self.strength / object.defense
@@ -208,7 +215,6 @@ class Player(): # Player resides in world, NOT environment
 	def use(self,item):
 		#TODO activate item if it exists in players inventory
 		pass
-
 	def update(self):
 		create_description()
 		#TODO
@@ -289,7 +295,7 @@ class Monster():
 		'Armored': [0,0,-2,2]
 		}
 		# TODO
-		# stat_list = [round(x) for x in (player.level/4)*(base[arg[0]] + modifier[arg[1]])]
+		#  create stats => [round(x) for x in (player.level/4)*(base[arg[0]] + modifier[arg[1]])]
 		pass
 	def create_description(self):
 		# TODO
@@ -303,13 +309,22 @@ class Villager():
 	'f':['Jill','Tammy', 'June','Beth']
 	}
 	def __init__(self,args):
-		self.name = args[0]
-		self.name_known = False
-		self.gender = args[1]
-		self.stats = {'hp':1,'speed':1,'defense':1}
+		# Flags
 		self.is_alive = True
+		self.name_known = False
+		self.is_inbattle = False
+
+		#
+		self.name = args[0]
+		self.gender = args[1]
 		self.desc_type = random.choice(['good','bad'])
 		self.description = self.create_description()
+
+		#Stats
+		self.hp = 1
+		self.speed = 1
+		self.defense = 1
+		self.strength = 0 #cannot hurt player
 	def create_description(self):
 		if self.gender == 'm':
 			pronoun = 'He'
@@ -374,9 +389,11 @@ class Item():
 def main():
 	world = World()
 	world.thing_gen((0,0),Villager)
-	world.player.talk(world.env.contents[0])
-	for i in range(5):
-		world.player.talk(world.env.contents[0])
+	print(world.map[(0,0)].contents[0].name)
+	print(world.env.contents[0].name)
+	world.env.contents[0].name = 'Jake'
+	print(world.map[(0,0)].contents[0].name)
+	print(world.env.contents[0].name)
 
 
 if __name__ == '__main__':
@@ -407,3 +424,14 @@ if __name__ == '__main__':
 # world.thing_gen((0,1),Villager)
 # print(world.map[(0,1)].name) # Print the environment type at (0,1) -- that is, environment.name
 # print(world.map[(0,1)].contents[0].name) # Print the name of the first object (villager) at (0,1)
+
+
+##### Case Tests
+# 1 - Changing an object in world.env will also change the world.map[(x,y)] object - they are the same
+	# world = World()
+	# world.thing_gen((0,0),Villager)
+	# print(world.map[(0,0)].contents[0].name)
+	# print(world.env.contents[0].name)
+	# world.env.contents[0].name = 'Jake'
+	# print(world.map[(0,0)].contents[0].name)
+	# print(world.env.contents[0].name)
