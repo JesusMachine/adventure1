@@ -6,7 +6,6 @@ import time
 import random
 import math
 import re
-# Commit Test
 
 class World(): # Global Container
 	def __init__(self):
@@ -82,10 +81,16 @@ class World(): # Global Container
 			"help": help_menu
 			}
 			if self.player.is_inbattle: # Remove certain choices (and change help menu) if in battle
+				if not self.player.battle_opponent.alive:
+					self.writer.msgslow("You've slayed "+battle_opponent.name+"!")
+					self.player.is_inbattle = False
+					self.player.battle_opponent.is_inbattle = False
+					self.player.battle_opponent = None
+					break
 				del action_dict['talk']
 				help_menu = self.battlehelp_menu
 				name_list = [self.player.battle_opponent]
-			else:
+			if not self.player.is_inbattle:
 				help_menu = self.help_menu
 				name_list = [x.name for x in self.env.contents]
 			action_flag = True
@@ -115,7 +120,7 @@ class World(): # Global Container
 					if self.player.is_inbattle:
 						self.writer.msg_slow("You can only interact with " + self.player.battle_opponent + " while fighting.")
 					self.writer.msg_slow("There is no " + noun + " here.")
-			pass
+			self.update()
 		if not self.player.alive:
 			#GAME OVER!!
 			pass
