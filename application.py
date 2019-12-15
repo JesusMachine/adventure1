@@ -58,7 +58,7 @@ class World(): # Global Container
 			self.writer.clear_screen()
 			self.writer.msg_slow('You awake to find yourself in an unfamiliar forest.')
 			self.writer.msg_slow('What do you do?')
-			self.get_input()
+			self.loop()
 		if not start_game:
 			player = Player('Jim')
 		pass
@@ -68,66 +68,66 @@ class World(): # Global Container
 		if self.player.is_inbattle: # TODO battle help menu
 			pass
 		pass
-	def get_input(self): # Basic Input System (Reader). # TODO Test ALL Features
-		while self.player.is_alive: # TODO need way to exit battle 
-								 # (set self.player.is_inbattle and self.player.battle_opponent to False)
-			action_dict = {
-			"inspect":self.player.inspect,
-			"attack":self.player.attack,
-			"talk":self.player.talk,
-			"inventory":self.player.inventory,
-			"move":self.player.move,
-			"use":self.player.use,
-			"help": self.help_menu
-			}
-			if self.player.is_inbattle: # Remove certain choices (and change help menu) if in battle
-				if not self.player.battle_opponent.is_alive:
-					self.writer.msg_slow("You've slayed "+self.player.battle_opponent.name+"!")
-					self.player.is_inbattle = False
-					self.player.battle_opponent.is_inbattle = False
-					self.player.battle_opponent = None
-					break
-				del action_dict['talk']
-				name_list = [self.player.battle_opponent.name.lower()]
-			if not self.player.is_inbattle:
-				name_list = [x.name.lower() for x in self.env.contents]
-			action_flag = True
-			while action_flag:
-				self.writer.msg_slow('What do you do?')
-				cmd = input(": ").lower().split()
-				action_word = cmd[0]
-				if (len(cmd)>=2) and (action_word in action_dict):
-					noun = ''.join(cmd[1::])
-					action_flag = False
-				elif action_word == "help":
-					self.help_menu()
-				elif action_word == "inventory":
-					#TODO print self.player.inventory
-					pass
-				elif (len(cmd)<2) and (action_word in action_dict):
-					self.writer.msg_slow("What do you want to {}?".format(cmd[0]))
-					noun = ''.join(input(": ").lower().split())
-					action_flag = False
-				else:
-					# TODO Change to writer output
-					self.writer.msg_slow("{} is an unknown action.".format(action_word))
-					self.writer.msg_slow("Please enter a valid action.")
-				if noun in name_list: # TODO add player inventory to search (for use)
-					noun_object = [x for x in self.env.contents if x.name.lower()==noun][0]
-					action_dict[action_word](noun_object)
-				else:
-					if self.player.is_inbattle:
-						self.writer.msg_slow("You can only interact with " + self.player.battle_opponent.name + " while fighting.")
-					else:
-						self.writer.msg_slow("There is no " + noun + " here.")
+	def loop(self):
+		while self.player.is_alive:
+			self.get_input()
 			self.update()
 		if not self.player.is_alive:
-			self.writer.clear_screen()
-			self.writer.msgslow("You died a horrible, atrocious death...GAME OVER")
-			pass
-	def update(self): # Updates all environments, which then update all objects (not very efficient, but I don't need to be for text-based)
-		for value in self.map.values():
+			self.writer.msg_slow('You died a horrible, agonizing death... GAMEOVER')
+	def get_input(self): # Basic Input System (Reader). # TODO Test ALL Features
+		action_dict = {
+		"inspect":self.player.inspect,
+		"attack":self.player.attack,
+		"talk":self.player.talk,
+		"inventory":self.player.inventory,
+		"move":self.player.move,
+		"use":self.player.use,
+		"help": self.help_menu
+		}
+		if self.player.is_inbattle: # Remove certain choices (and change help menu) if in battle
+			del action_dict['talk']
+			name_list = [self.player.battle_opponent.name.lower()]
+		if not self.player.is_inbattle:
+			name_list = [x.name.lower() for x in self.env.contents]
+		action_flag = True
+		while action_flag:
+			self.writer.msg_slow('What do you do?')
+			cmd = input(": ").lower().split()
+			action_word = cmd[0]
+			if (len(cmd)>=2) and (action_word in action_dict):
+				noun = ''.join(cmd[1::])
+				action_flag = False
+			elif action_word == "help":
+				self.help_menu()
+			elif action_word == "inventory":
+				#TODO print self.player.inventory
+				pass
+			elif (len(cmd)<2) and (action_word in action_dict):
+				self.writer.msg_slow("What do you want to {}?".format(cmd[0]))
+				noun = ''.join(input(": ").lower().split())
+				action_flag = False
+			else:
+				# TODO Change to writer output
+				self.writer.msg_slow("{} is an unknown action.".format(action_word))
+				self.writer.msg_slow("Please enter a valid action.")
+			if noun in name_list: # TODO add player inventory to search (for use)
+				noun_object = [x for x in self.env.contents if x.name.lower()==noun][0]
+				action_dict[action_word](noun_object)
+			else:
+				if self.player.is_inbattle:
+					self.writer.msg_slow("You can only interact with " + self.player.battle_opponent.name + " while fighting.")
+				else:
+					self.writer.msg_slow("There is no " + noun + " here.")
+	def update(self): # Updates player and all environments, which then update all objects
+		for value in self.map.values(): # Update environments
 			value.update()
+			if value.print_out.strip():
+				self.writer.msg_slow(value.print_out) #print messages from environments
+				value.print_out=''
+		self.player.update() # Update player
+		if self.player.print_out.strip():
+			self.writer.msg_slow(self.player.print_out) #print messages from player
+			self.player.print_out = ''
 		pass
 class Writer(): # Basic Output System
 	def __init__(self):
@@ -161,6 +161,8 @@ class Writer(): # Basic Output System
 class Player(): # Player resides in world, NOT environment
 	def __init__(self,name):
 		self.name = name
+		self.t = 0
+		self.print_out =''
 		# State Flags
 		self.is_alive = True
 		self.is_inbattle = False
@@ -182,6 +184,9 @@ class Player(): # Player resides in world, NOT environment
 	def create_description(self): # TODO
 		# TODO description will be based on current hp out of max hp for level
 		self.description = 'None'
+		pass
+	def print_add(self,msg):
+		self.print_out += '\n' + msg
 	def inspect(self,object): # TODO needs to provide who you're at battle with and what their condition is
 		if self.is_inbattle:
 			print(self.battle_opponent.name)
@@ -190,6 +195,9 @@ class Player(): # Player resides in world, NOT environment
 		#TODO Need to make way such that only player and object can interact until 1.) one dies, or 2.) player moves and escapes (player.speed>object.speed)
 		# This should be accomplished in world.get_input()
 
+		if not attack_object.is_alive:
+			self.print_add('You attack '+attack_object.name+"'s dead corpse. You get some blood and guts on yourself but nothing else happens.")
+			return
 		# Setup Settings
 		self.is_inbattle = True
 		attack_object.is_inbattle = True
@@ -200,12 +208,26 @@ class Player(): # Player resides in world, NOT environment
 		hploss_take = attack_object.strength / self.strength
 
 		#Damage Assignment
+			 # Player attacks
 		if random.choices(population=[1,0],weights=[p_hit,1-p_hit]):
-			print('You hit '+attack_object.name+'.')
+			self.print_add('You hit '+attack_object.name+'.')
 			attack_object.hp-=hploss_give
-		elif random.choices(population=[1,0],weights=[p_gethit,1-p_gethit]):
-			print('You were hit by '+attack_object.name+'.')
+		else:
+			self.print_add('You missed '+attack_object.name+'.')
+		if self.battle_opponent.hp<=0: # Opponent killed -> fight is over
+			self.print_add("You've slain "+self.battle_opponent.name+"!")
+			self.is_inbattle = False
+			self.battle_opponent.is_inbattle = False
+			self.battle_opponent = None
+			return 
+			# Opponent attacks
+		if random.choices(population=[1,0],weights=[p_gethit,1-p_gethit]):
+			self.print_add('You were hit by '+attack_object.name+'.')
 			self.hp-=hploss_take
+		else:
+			self.print_add(attack_object.name+' missed you.')
+		if self.hp <=0: # Player killed
+			return
 		pass
 	def talk(self, object):
 		yousay = 'You say hi to '
@@ -232,10 +254,14 @@ class Player(): # Player resides in world, NOT environment
 		#TODO activate item if it exists in players inventory
 		pass
 	def update(self):
-		create_description()
+		self.create_description()
 		if self.hp == 0:
 			self.is_alive = False
 		pass
+		# Always at end of update!
+		if not self.is_inbattle:
+			self.t += 1
+
 class Environment(): # Local Container -- Contains all Monsters, Villagers, Items except Player (contained in world)
 	# env_stuff = {
 	# 'forest': {'description':['lush','green'],'things':['Monster','Item','Villager']},
@@ -244,6 +270,7 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 	# }
 	def __init__(self,env_type):
 		self.name = env_type
+		self.print_out = '' 
 		self.contents = list()
 		self.create_description()
 		self.env_description = self.get_description()
@@ -279,6 +306,8 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 	def update(self): # Updates all objects in environment
 		for x in self.contents:
 			x.update()
+			if x.print_out.strip(): # Check if there is a printout from object
+				self.print_out += x.print_out
 		pass
 class Monster(): # TODO cannot have 2 monsters with same name in environment, make a rename method to resolve (can be Elf1 and ELf2 or simply reroll)
 	mon_types = { # TODO addmore
@@ -293,6 +322,7 @@ class Monster(): # TODO cannot have 2 monsters with same name in environment, ma
 
 
 		self.name = arg[1] + ' ' + arg[0]
+		self.print_out = '' 
 		self.create_stats()
 		self.create_decription()
 	def create_stats(self,args):
@@ -333,6 +363,7 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 
 		#
 		self.name = args[0]
+		self.print_out = ''
 		self.gender = args[1]
 		self.desc_type = random.choice(['good','bad'])
 		self.description = self.create_description()
@@ -412,7 +443,7 @@ def main():
 	world.player.battle_opponent.is_inbattle = True
 	# Trying battle
 	print(world.env.contents[0].name) # Name of villager to attack
-	world.get_input()
+	world.loop()
 
 
 
