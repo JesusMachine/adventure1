@@ -79,7 +79,7 @@ class World(): # Global Container
 		"inspect":self.player.inspect,
 		"attack":self.player.attack,
 		"talk":self.player.talk,
-		"inventory":self.player.inventory,
+		"inventory":self.player.inventory_print,
 		"move":self.player.move,
 		"use":self.player.use,
 		"help": self.help_menu
@@ -100,8 +100,10 @@ class World(): # Global Container
 			elif action_word == "help":
 				self.help_menu()
 			elif action_word == "inventory":
-				#TODO print self.player.inventory
+				self.player.inventory()
 				pass
+			# elif self.player.is_inbattle and :
+				# action_dict
 			elif (len(cmd)<2) and (action_word in action_dict):
 				self.writer.msg_slow("What do you want to {}?".format(cmd[0]))
 				noun = ''.join(input(": ").lower().split())
@@ -163,6 +165,7 @@ class Player(): # Player resides in world, NOT environment
 		self.name = name
 		self.t = 0
 		self.print_out =''
+		self.inventory_dict={}
 		# State Flags
 		self.is_alive = True
 		self.is_inbattle = False
@@ -189,31 +192,38 @@ class Player(): # Player resides in world, NOT environment
 		self.print_out += '\n' + msg
 	def inspect(self,object): # TODO needs to provide who you're at battle with and what their condition is
 		if self.is_inbattle:
-			print(self.battle_opponent.name)
+			self.print_add(self.battle_opponent.name)
 		pass
-	def attack(self, attack_object):
+	def attack(self, *args):
 		#TODO Need to make way such that only player and object can interact until 1.) one dies, or 2.) player moves and escapes (player.speed>object.speed)
 		# This should be accomplished in world.get_input()
 
+
+		## Player attacks first
+		for arg in args:
+			attack_object = arg # extracting attack_object from tuple
 		if not attack_object.is_alive:
 			self.print_add('You attack '+attack_object.name+"'s dead corpse. You get some blood and guts on yourself but nothing else happens.")
 			return
+		self.battle_opponent=attack_object
+
+
 		# Setup Settings
 		self.is_inbattle = True
-		attack_object.is_inbattle = True
+		self.battle_opponent.is_inbattle = True
 		self.battle_opponent = attack_object
-		p_hit = self.speed = 0.8*self.speed / (attack_object.speed + self.speed)
-		p_gethit = 0.8*attack_object.speed / (attack_object.speed + self.speed)
-		hploss_give = self.strength / attack_object.defense
-		hploss_take = attack_object.strength / self.strength
+		p_hit = self.speed = 0.8*self.speed / (self.battle_opponent.speed + self.speed)
+		p_gethit = 0.8*self.battle_opponent.speed / (self.battle_opponent.speed + self.speed)
+		hploss_give = self.strength / self.battle_opponent.defense
+		hploss_take = self.battle_opponent.strength / self.strength
 
 		#Damage Assignment
 			 # Player attacks
 		if random.choices(population=[1,0],weights=[p_hit,1-p_hit]):
-			self.print_add('You hit '+attack_object.name+'.')
-			attack_object.hp-=hploss_give
+			self.print_add('You hit '+self.battle_opponent.name+'.')
+			self.battle_opponent.hp-=hploss_give
 		else:
-			self.print_add('You missed '+attack_object.name+'.')
+			self.print_add('You missed '+self.battle_opponent.name+'.')
 		if self.battle_opponent.hp<=0: # Opponent killed -> fight is over
 			self.print_add("You've slain "+self.battle_opponent.name+"!")
 			self.is_inbattle = False
@@ -222,10 +232,10 @@ class Player(): # Player resides in world, NOT environment
 			return 
 			# Opponent attacks
 		if random.choices(population=[1,0],weights=[p_gethit,1-p_gethit]):
-			self.print_add('You were hit by '+attack_object.name+'.')
+			self.print_add('You were hit by '+self.battle_opponent.name+'.')
 			self.hp-=hploss_take
 		else:
-			self.print_add(attack_object.name+' missed you.')
+			self.print_add(self.battle_opponent.name+' missed you.')
 		if self.hp <=0: # Player killed
 			return
 		pass
@@ -244,8 +254,12 @@ class Player(): # Player resides in world, NOT environment
 		print(object.create_dialogue())
 		object.name_known = True
 		pass
-	def inventory(self): #TODO
-		#TODO prints items in players inventory
+	def inventory_print(self): # Prints items in player.inventory_dict
+		for key in self.inventory_dict.keys:
+			self.print_add(str(key)+':'+str(self.inventory_dict[key]))
+		pass
+	def inventory_add(self):# Adds items to self.inventory.dict
+
 		pass
 	def move(self, where): #TODO
 		#TODO moves player to new location if it exists and if not in battle. If not, states there are mountains there. If in battle, calculates chances to run based on speed. ALSO adds 1 to time if successful.
