@@ -15,25 +15,47 @@
 	- implement player.inventory_add
 	- test self.inventory_print
 
---- Future Implements ---
+
+
+
+--- FUTUREDEV ---
+
+- stats are dependent on health
+	- if hurt, speed and strength are less
+	- defense is static and only depends on level and equipment
 - player.equipment_dict 
 	- keys = helm, torso, gauntlet, sword, etc
 	- values = items of type
 - class item.type()
 	- potions, helms, torso, gauntlet, sword etc 
 	- dictates where can be applied (or not if potion)
+- Multiple hits per attack
+	- player.attack() structure allows for player or opponent to hit multiple times (or none); make it so that if multiple speed ratio, attack multiple times.
+
 
 
 
 --- BUGS ---
 
 - entering unknown action for world.get_input() throws error and exits world.loop()
-- 
+- world.get_input() isnt right with the action_flag
 
 
 
 
 --- UPDATES ---
+
+19.12.21.0
+- world.get_input()
+	- added noun flag and separate while noun_flag
+	- reorganized world.get_input() for one word or more input
+		- Allows for single word input when in battle
+	- added name_lists for move() and use()
+- player.attack()
+	- reorganized for if args used (whether continuing attack or starting)
+	- removed attack_object
+- player.talk()
+	- changed print()'s to self.print_add()
 
 Update 19.12.15.1
 - Added player.inventory_dict, player.inventory_print()

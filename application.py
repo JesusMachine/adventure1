@@ -28,9 +28,9 @@ class World(): # Global Container
 		# TODO intantiations things based on 1.) environment at location and 2.) thing_type
 		# 
 		if thing_type == Villager:
-			gender = random.choice(['m','f'])
-			name = random.choice(Villager.names[gender])
-			attr = name, gender
+			pronoun = random.choice(['He','She'])
+			name = random.choice(Villager.names[pronoun])
+			attr = name, pronoun
 		elif thing_type == Monster:
 			# TODO - init settings for monster
 			pass
@@ -76,50 +76,63 @@ class World(): # Global Container
 			self.writer.msg_slow('You died a horrible, agonizing death... GAMEOVER')
 	def get_input(self): # Basic Input System (Reader). # TODO Test ALL Features
 		action_dict = {
-		"inspect":self.player.inspect,
-		"attack":self.player.attack,
-		"talk":self.player.talk,
-		"inventory":self.player.inventory_print,
-		"move":self.player.move,
-		"use":self.player.use,
-		"help": self.help_menu
+		"inspect":self.player.inspect, # no noun req if in battle
+		"attack":self.player.attack, # no noun req if in battle
+		"talk":self.player.talk, # noun req
+		"inventory":self.player.inventory_print, # no noun req
+		"move":self.player.move, # no noun req if in battle
+		"use":self.player.use, # noun req
+		"help": self.help_menu # no noun req
 		}
+		action_flag = True
+		noun_flag = True
+		noun = None
 		if self.player.is_inbattle: # Remove certain choices (and change help menu) if in battle
 			del action_dict['talk']
 			name_list = [self.player.battle_opponent.name.lower()]
-		if not self.player.is_inbattle:
+			noun_flag = False
+		else:
 			name_list = [x.name.lower() for x in self.env.contents]
-		action_flag = True
 		while action_flag:
 			self.writer.msg_slow('What do you do?')
 			cmd = input(": ").lower().split()
 			action_word = cmd[0]
-			if (len(cmd)>=2) and (action_word in action_dict):
-				noun = ''.join(cmd[1::])
+			if (action_word in action_dict):
+				if len(cmd)>=2 and noun_flag:
+					noun = ''.join(cmd[1::])
+				elif action_word=="help" or action_word=="inventory":
+					noun_flag = False
 				action_flag = False
-			elif action_word == "help":
-				self.help_menu()
-			elif action_word == "inventory":
-				self.player.inventory()
-				pass
-			# elif self.player.is_inbattle and :
-				# action_dict
-			elif (len(cmd)<2) and (action_word in action_dict):
-				self.writer.msg_slow("What do you want to {}?".format(cmd[0]))
-				noun = ''.join(input(": ").lower().split())
-				action_flag = False
-			else:
-				# TODO Change to writer output
+			else: # unknown verb
 				self.writer.msg_slow("{} is an unknown action.".format(action_word))
 				self.writer.msg_slow("Please enter a valid action.")
-			if noun in name_list: # TODO add player inventory to search (for use)
-				noun_object = [x for x in self.env.contents if x.name.lower()==noun][0]
-				action_dict[action_word](noun_object)
-			else:
-				if self.player.is_inbattle:
-					self.writer.msg_slow("You can only interact with " + self.player.battle_opponent.name + " while fighting.")
-				else:
-					self.writer.msg_slow("There is no " + noun + " here.")
+			while noun_flag:
+				if action_word == "move":
+					name_list =["north","south","east","west"]
+				elif action_word == "use":
+					name_list = self.player.inventory_dict.keys()
+				if noun: # if noun has been defined
+					if noun in name_list: # TODO add player inventory to search (for use)
+						noun_object = [x for x in self.env.contents if x.name.lower()==noun][0]
+						noun_flag = False
+					elif action_word=="inspect" and noun=="environment":
+						noun_object = self.env
+						noun_flag = False
+					else: # noun not in name list
+						self.writer.msg_slow("There is no " + noun + " here.")
+						noun = None
+				else: # Noun required, but none provided
+					# TODO this needs a prefix/statement dictionary bank based on action type
+					self.writer.msg_slow("What do you want to {}?".format(cmd[0]))
+					noun = ''.join(input(": ").lower().split())
+					if noun == "cancel":
+						action_flag = True
+						break # exit to action while loop
+		if noun:
+			action_dict[action_word](noun_object)
+		else:
+			action_dict[action_word]()
+
 	def update(self): # Updates player and all environments, which then update all objects
 		for value in self.map.values(): # Update environments
 			value.update()
@@ -190,69 +203,84 @@ class Player(): # Player resides in world, NOT environment
 		pass
 	def print_add(self,msg):
 		self.print_out += '\n' + msg
-	def inspect(self,object): # TODO needs to provide who you're at battle with and what their condition is
-		if self.is_inbattle:
+	def inspect(self,*args): # TODO needs to provide who you're at battle with and what their condition is
+		if not args:
 			self.print_add(self.battle_opponent.name)
+			for stat in [hp,strength,speed,defense]:
+				self.print_add('    '+str(stat)+': '+self.battle_opponent.stat)
+			# TODO provide qualitative information regarding current stats
+		else:
+			inspect_object = args[0]
+			self.print_add(inspect_object.get_description())
+			# self.print_add()
+			# TODO get description of arg - get change obj.get_desc to work with this
+			# # # obj.get_desc should provide the necessary prefixes etc for the description.
+			pass
 		pass
-	def attack(self, *args):
-		#TODO Need to make way such that only player and object can interact until 1.) one dies, or 2.) player moves and escapes (player.speed>object.speed)
-		# This should be accomplished in world.get_input()
+	def attack(self,*args):
+		if args: # Player attacks first
+			self.battle_opponent = args[0]
+			attack_first = True
+		else: # NPC attacks first
+			attack_first = False
 
 
-		## Player attacks first
-		for arg in args:
-			attack_object = arg # extracting attack_object from tuple
-		if not attack_object.is_alive:
-			self.print_add('You attack '+attack_object.name+"'s dead corpse. You get some blood and guts on yourself but nothing else happens.")
+		if not self.battle_opponent.is_alive:
+			self.print_add('You attack '+self.battle_opponent.name+"'s dead corpse. You get some blood and guts on yourself but nothing else happens.")
 			return
-		self.battle_opponent=attack_object
-
 
 		# Setup Settings
 		self.is_inbattle = True
 		self.battle_opponent.is_inbattle = True
-		self.battle_opponent = attack_object
-		p_hit = self.speed = 0.8*self.speed / (self.battle_opponent.speed + self.speed)
+		p_hit = 0.8*self.speed / (self.battle_opponent.speed + self.speed)
 		p_gethit = 0.8*self.battle_opponent.speed / (self.battle_opponent.speed + self.speed)
-		hploss_give = self.strength / self.battle_opponent.defense
-		hploss_take = self.battle_opponent.strength / self.strength
 
 		#Damage Assignment
-			 # Player attacks
-		if random.choices(population=[1,0],weights=[p_hit,1-p_hit]):
-			self.print_add('You hit '+self.battle_opponent.name+'.')
-			self.battle_opponent.hp-=hploss_give
-		else:
-			self.print_add('You missed '+self.battle_opponent.name+'.')
-		if self.battle_opponent.hp<=0: # Opponent killed -> fight is over
-			self.print_add("You've slain "+self.battle_opponent.name+"!")
-			self.is_inbattle = False
-			self.battle_opponent.is_inbattle = False
-			self.battle_opponent = None
-			return 
-			# Opponent attacks
-		if random.choices(population=[1,0],weights=[p_gethit,1-p_gethit]):
-			self.print_add('You were hit by '+self.battle_opponent.name+'.')
-			self.hp-=hploss_take
-		else:
-			self.print_add(self.battle_opponent.name+' missed you.')
-		if self.hp <=0: # Player killed
-			return
-		pass
-	def talk(self, object):
+		player_flag = True # TODO FUTUREDEV add multiple hits per turn depending on speed ratio
+		opponent_flag = True
+		while player_flag or opponent_flag:
+			if attack_first or not opponent_flag: # if player attacks first or opponent has already attacked
+				player_flag = False
+				hploss_give = round(random.uniform(0.5,1)*self.strength / self.battle_opponent.defense)
+				hit = random.choices(population=[True,False],weights=[p_hit,1.0-p_hit])[0]
+				if hit:	
+					self.print_add('You hit '+self.battle_opponent.name+'.')
+					self.print_add(self.battle_opponent.name+' lost '+str(hploss_give)+" hp.")
+					self.battle_opponent.hp-=hploss_give
+				else:
+					self.print_add('You missed '+self.battle_opponent.name+'.')
+				if self.battle_opponent.hp<=0: # Opponent killed -> fight is over
+					self.print_add("You've slain "+self.battle_opponent.name+"!")
+					self.is_inbattle = False
+					self.battle_opponent.is_inbattle = False
+					self.battle_opponent = None
+					return 
+			while opponent_flag: # Opponent attacks
+				opponent_flag  = False
+				hploss_take = round(random.uniform(0.5,1)*self.battle_opponent.strength / self.defense)
+				get_hit = random.choices([True,False],weights=[p_gethit,1.0-p_gethit])[0]
+				if get_hit:
+					self.print_add('You were hit by '+self.battle_opponent.name+'.')
+					self.print_add("You've lost "+str(hploss_take)+' hp.')
+					self.hp-=hploss_take
+				else:
+					self.print_add(self.battle_opponent.name+' missed you.')
+				if self.hp <=0: # Player killed
+					return
+				pass
+	def talk(self, talk_object):
 		yousay = 'You say hi to '
-		if isinstance(object, Villager):
-			if object.name_known:
-				yousay += object.name +'.'
+		if isinstance(talk_object, Villager):
+			if talk_object.name_known:
+				yousay += talk_object.name +'.'
 			else:
-				if object.gender == 'm':
+				if talk_object.pronoun == 'He':
 					yousay += 'the man.'
 				else:
 					yousay += 'the woman.'
-
-		print(yousay)
-		print(object.create_dialogue())
-		object.name_known = True
+		self.print_add(yousay)
+		self.print_add(talk_object.get_dialogue())
+		talk_object.name_known = True
 		pass
 	def inventory_print(self): # Prints items in player.inventory_dict
 		for key in self.inventory_dict.keys:
@@ -286,8 +314,7 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 		self.name = env_type
 		self.print_out = '' 
 		self.contents = list()
-		self.create_description()
-		self.env_description = self.get_description()
+		self.create_description() # Create environment static description
 	def create_description(self): # Creates Unique Description
 		if self.name == 'forest':
 			desc_list1 = ['lush,', 'quiet,', 'peaceful,', 'solumn,', 'eerie,', 'cold,', 'bright,', 'dark,', 'thick,', 'haunted,', 'creepy,']
@@ -305,17 +332,17 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 			prefix = 'an'
 		else:
 			prefix = 'a'
-		self.description = prefix + ' ' + desc1 + ' ' + desc2 + ' ' + self.name
+		self.env_description = prefix + ' ' + desc1 + ' ' + desc2 + ' ' + self.name
 	def get_description(self): # Get description of environment and contents
-		description = 'You find yourself in ' + self.description + '.'
+		description = 'You find yourself in ' + self.env_description + '.'
 		for x in self.contents:
 			description +='\n' + 'You see '  # TODO change to more than "you see"
 			if isinstance(x,Villager):
-				if x.gender == 'm':
+				if x.pronoun == 'He':
 					description += 'a man... '
-				elif x.gender == 'f':
+				else:
 					description += 'a woman... '
-			description += x.description
+			description += x.get_description()
 		return description
 	def update(self): # Updates all objects in environment
 		for x in self.contents:
@@ -366,8 +393,8 @@ class Monster(): # TODO cannot have 2 monsters with same name in environment, ma
 			self.is_alive == False
 class Villager(): # TODO cannot have 2 villagers with same name in environment, make a rename method to resolve (can be Jill1 and Jill2 or simply reroll)
 	names = {
-	'm':['Jim', 'Ted', 'Bob','Tom'],
-	'f':['Jill','Tammy', 'June','Beth']
+	'He':['Jim', 'Ted', 'Bob','Tom'],
+	'She':['Jill','Tammy', 'June','Beth']
 	}
 	def __init__(self,args):
 		# Flags
@@ -376,51 +403,57 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 		self.is_inbattle = False
 
 		#
-		self.name = args[0]
+		self.pronoun = args[1]
+		self.name = self.initial_name()
+		self.true_name = args[0] # name after name_know
 		self.print_out = ''
-		self.gender = args[1]
 		self.desc_type = random.choice(['good','bad'])
-		self.description = self.create_description()
+		self.create_description()
 
 		#Stats
 		self.hp = 1
-		self.speed = 1
+		self.speed = 0 # Cannot hit player
 		self.defense = 1
 		self.strength = 0 #cannot hurt player
+	def initial_name(self):
+		if self.pronoun == "He":
+			return "man"
+		else:
+			return "woman"
 	def create_description(self):
-		if self.gender == 'm':
-			pronoun = 'He'
+		# TODO - create self.positive or negative (random)
+		# Then, create positive, neutral negative descriptions and dialogue
+		# Ex - negative "She smells like a nasty, old whore" - nasty, whore = negative, old = neutral
+		# Ex - positive "He looks like a cheery, old friend "
+		self.desc_type = random.choice(['bad','good'])
+		if self.desc_type == 'bad':
+			verb_list = ['looks', 'smells', 'stinks']			
+			adj_list1 = ['nasty','angry','scary']
+			adj_list2 = ['dirty','filthy','scabbies-ridden','toothless','old','cold']
+			noun_list = ['devil','skank','whore', 'tool','beggar']
+		elif self.desc_type == 'good':
+			verb_list = ['looks','sounds']
+			adj_list1 = ['kind','beautiful','friendly','intelligent','young','old']
+			adj_list2 = ['warm','observant','upright','modest','vibrant','hard-working']
+			noun_list = ['angel','saint','citizen','scholar','professional']
+		verb = random.choice(verb_list)
+		self.adj1 = random.choice(adj_list1)
+		self.adj2 = random.choice(adj_list2)
+		noun = random.choice(noun_list)
+		if re.match(r'[aeiou]',self.adj1[0]):
+			prefix = 'an'
 		else:
-			pronoun = 'She'
-		if self.is_alive == True:
-			# TODO - create self.positive or negative (random)
-			# Then, create positive, neutral negative descriptions and dialogue
-			# Ex - negative "She smells like a nasty, old whore" - nasty, whore = negative, old = neutral
-			# Ex - positive "He looks like a cheery, old friend "
-			self.desc_type = random.choice(['bad','good'])
-			if self.desc_type == 'bad':
-				verb_list = ['looks', 'smells', 'stinks']			
-				adj_list1 = ['nasty','angry','scary']
-				adj_list2 = ['dirty','filthy','scabbies-ridden','toothless','old','cold']
-				noun_list = ['devil','skank','whore', 'tool','beggar']
-			elif self.desc_type == 'good':
-				verb_list = ['looks','sounds']
-				adj_list1 = ['kind','beautiful','friendly','intelligent','young','old']
-				adj_list2 = ['warm','observant','upright','modest','vibrant','hard-working']
-				noun_list = ['angel','saint','citizen','scholar','professional']
-			verb = random.choice(verb_list)
-			self.adj1 = random.choice(adj_list1)
-			self.adj2 = random.choice(adj_list2)
-			noun = random.choice(noun_list)
-			if re.match(r'[aeiou]',self.adj1[0]):
-				prefix = 'an'
-			else:
-				prefix = 'a'
-			self.description = pronoun + ' ' + verb + ' like' + ' ' + prefix + ' ' + self.adj1 + ', ' + self.adj2 + ' ' + noun
-			self.description2 = self.adj1 + ', ' + self.adj2 + ' ' + noun
+			prefix = 'a'
+		self.init_description = self.pronoun + ' ' + verb + ' like' + ' ' + prefix + ' ' + self.adj1 + ', ' + self.adj2 + ' ' + noun+'.'
+		self.description = "it's "+self.adj1+ ', ' +self.adj2 +' '+self.name+'.'
+	def get_description(self):
+		if self.is_alive:
+			return self.init_description
 		else:
-			pass # TODO make description of blood or messed up corpse
+			return "While they once looked " + self.adj1 + " and " + self.adj2 + ", now you see a pile of organs, blood and meat. Perhaps some teeth."
 	def create_dialogue(self): # If positive, also add probability for a tip (tells you what is to the north/east/west/south)
+		
+
 		if self.desc_type == 'good':
 			start_list = ["Hi! I'm ","Why, hello! ","Good Day! "]
 			intro_list = ['My name is ', 'You can call me ']
@@ -432,7 +465,8 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 			end_list1 = ['Hope the back looks better than the front!',"Don't talk to me no more!"]
 			end_list2 = ['What!? Do you want some loose teeth?',"Thought I made myself clear, get the hell out of here!"]
 		start_dialogue = random.choice(start_list)
-		intro_dialogue = random.choice(intro_list) +  self.name  +'. '
+		intro_dialogue = random.choice(intro_list) +  self.true_name  +'. '
+		self.name = self.true_name
 		if self.name_known:
 			end_dialogue = random.choice(end_list2)
 			dialogue = end_dialogue
@@ -440,22 +474,21 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 			end_dialogue = random.choice(end_list1)
 			dialogue = start_dialogue + intro_dialogue + end_dialogue
 		return dialogue
+	def get_dialogue(self):
+		if self.is_alive:
+			return self.create_dialogue()
+		else:
+			return '"..." The bloody corpse says nothing back.'
 	def update(self):
 		if self.hp == 0:
 			self.is_alive = False
-			self.description = "While they once looked " + self.adj1 + " and " + self.adj2 + ", now you see a pile of organs, blood and meat. Perhaps some teeth."
-			self.dialogue = "You talk to the bloody corpse, but it says nothing back."
 class Item():
 	pass
 
 def main():
 	world = World()
 	world.thing_gen((0,0),Villager)
-	# Creating Battle
-	world.player.is_inbattle = True
-	world.player.battle_opponent = world.env.contents[0]
-	world.player.battle_opponent.is_inbattle = True
-	# Trying battle
+	print(world.env.name)
 	print(world.env.contents[0].name) # Name of villager to attack
 	world.loop()
 
