@@ -7,6 +7,8 @@ import random
 import math
 import re
 
+start_game = True
+
 class World(): # Global Container
 	def __init__(self):
 		self.map = self.create_world(20,20)
@@ -42,7 +44,6 @@ class World(): # Global Container
 	def new_game(self):
 		self.place_gen((0,0),'forest') # Change this to world_gen later (Populates ALL of map with items and monsters - uses place_gen, then thing_gen)
 		self.env = self.map[(0,0)]
-		start_game = False # TODO Change this when finished debugging!!!
 		if start_game:
 			self.writer.clear_screen()
 			name = input('Please enter your characters name:\n')
@@ -57,7 +58,6 @@ class World(): # Global Container
 			self.writer.msg_slow('"Please help us, {}!"...'.format(self.player.name))
 			self.writer.clear_screen()
 			self.writer.msg_slow('You awake to find yourself in an unfamiliar forest.')
-			self.writer.msg_slow('What do you do?')
 			self.loop()
 		if not start_game:
 			player = Player('Jim')
@@ -73,7 +73,7 @@ class World(): # Global Container
 			self.get_input()
 			self.update()
 		if not self.player.is_alive:
-			self.writer.msg_slow('You died a horrible, agonizing death... GAMEOVER')
+			self.writer.msg_slow('You died a horrible, agonizing death... GAME OVER')
 	def get_input(self): # Basic Input System (Reader). # TODO Test ALL Features
 		action_dict = {
 		"inspect":self.player.inspect, # no noun req if in battle
@@ -97,6 +97,8 @@ class World(): # Global Container
 			self.writer.msg_slow('What do you do?')
 			cmd = input(": ").lower().split()
 			action_word = cmd[0]
+			if cmd[1] == "to":
+				del cmd[1]
 			if (action_word in action_dict):
 				if len(cmd)>=2 and noun_flag:
 					noun = ''.join(cmd[1::])
@@ -132,7 +134,6 @@ class World(): # Global Container
 			action_dict[action_word](noun_object)
 		else:
 			action_dict[action_word]()
-
 	def update(self): # Updates player and all environments, which then update all objects
 		for value in self.map.values(): # Update environments
 			value.update()
@@ -303,7 +304,6 @@ class Player(): # Player resides in world, NOT environment
 		# Always at end of update!
 		if not self.is_inbattle:
 			self.t += 1
-
 class Environment(): # Local Container -- Contains all Monsters, Villagers, Items except Player (contained in world)
 	# env_stuff = {
 	# 'forest': {'description':['lush','green'],'things':['Monster','Item','Villager']},
@@ -430,7 +430,7 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 			verb_list = ['looks', 'smells', 'stinks']			
 			adj_list1 = ['nasty','angry','scary']
 			adj_list2 = ['dirty','filthy','scabbies-ridden','toothless','old','cold']
-			noun_list = ['devil','skank','whore', 'tool','beggar']
+			noun_list = ['devil','skank','inbred', 'tool','beggar']
 		elif self.desc_type == 'good':
 			verb_list = ['looks','sounds']
 			adj_list1 = ['kind','beautiful','friendly','intelligent','young','old']
@@ -452,20 +452,18 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 		else:
 			return "While they once looked " + self.adj1 + " and " + self.adj2 + ", now you see a pile of organs, blood and meat. Perhaps some teeth."
 	def create_dialogue(self): # If positive, also add probability for a tip (tells you what is to the north/east/west/south)
-		
-
 		if self.desc_type == 'good':
-			start_list = ["Hi! I'm ","Why, hello! ","Good Day! "]
-			intro_list = ['My name is ', 'You can call me ']
-			end_list1 = ["It's nice to meet you!", "Splended to make your aquaintance!", "Fantastic to meet you."]
-			end_list2 = ["It's nice to see you again!", "Splended to see you again", "Fantastic to see you again."]
+			start_list = ["\"Hi! ","\"Why, hello! ","\"Good Day! "]
+			intro_list = ['My name is ', 'You can call me']
+			end_list1 = ["\"It's nice to meet you!\"", "\"Splended to make your aquaintance!\"", "\"Fantastic to meet you.\""]
+			end_list2 = ["\"It's nice to see you again!\"", "\"Splended to see you again\"", "\"Fantastic to see you again.\""]
 		elif self.desc_type == 'bad':
-			start_list = ["wudaya want? *Spit* ","You keep staring and Imma hit ya. "]
-			intro_list = ['You can call me ', "The name's "]
-			end_list1 = ['Hope the back looks better than the front!',"Don't talk to me no more!"]
-			end_list2 = ['What!? Do you want some loose teeth?',"Thought I made myself clear, get the hell out of here!"]
+			start_list = ["\"wudaya want?\" *Spit* ","\"You keep staring and Imma hit ya.\" "]
+			intro_list = ['\"You can call me ', "\"The name's "]
+			end_list1 = ['\"Hope the back looks better than the front!\"',"\"Don't talk to me no more!\""]
+			end_list2 = ['\"What!? Do you want some loose teeth?\"',"\"Thought I made myself clear, get the hell out of here!\""]
 		start_dialogue = random.choice(start_list)
-		intro_dialogue = random.choice(intro_list) +  self.true_name  +'. '
+		intro_dialogue = random.choice(intro_list) +  self.true_name+'"'  +'. '
 		self.name = self.true_name
 		if self.name_known:
 			end_dialogue = random.choice(end_list2)
@@ -487,10 +485,10 @@ class Item():
 
 def main():
 	world = World()
-	world.thing_gen((0,0),Villager)
-	print(world.env.name)
-	print(world.env.contents[0].name) # Name of villager to attack
-	world.loop()
+	# world.thing_gen((0,0),Villager)
+	# print(world.env.name)
+	# print(world.env.contents[0].name) # Name of villager to attack
+	# world.loop()
 
 
 

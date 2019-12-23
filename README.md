@@ -44,6 +44,10 @@
 
 
 --- UPDATES ---
+19.12.23.0
+- villager dialogue
+	- added quotations
+
 
 19.12.21.0
 - world.get_input()
