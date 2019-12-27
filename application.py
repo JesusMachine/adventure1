@@ -7,7 +7,7 @@ import random
 import math
 import re
 
-start_game = True
+start_game = False
 
 class World(): # Global Container
 	def __init__(self):
@@ -44,6 +44,9 @@ class World(): # Global Container
 	def new_game(self):
 		self.place_gen((0,0),'forest') # Change this to world_gen later (Populates ALL of map with items and monsters - uses place_gen, then thing_gen)
 		self.env = self.map[(0,0)]
+		self.thing_gen((0,0),Villager)
+		# TODO add static characters and environments here
+		# TODO add randomized characters and environments here
 		if start_game:
 			self.writer.clear_screen()
 			name = input('Please enter your characters name:\n')
@@ -454,7 +457,7 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 	def create_dialogue(self): # If positive, also add probability for a tip (tells you what is to the north/east/west/south)
 		if self.desc_type == 'good':
 			start_list = ["\"Hi! ","\"Why, hello! ","\"Good Day! "]
-			intro_list = ['My name is ', 'You can call me']
+			intro_list = ['My name is ', 'You can call me ']
 			end_list1 = ["\"It's nice to meet you!\"", "\"Splended to make your aquaintance!\"", "\"Fantastic to meet you.\""]
 			end_list2 = ["\"It's nice to see you again!\"", "\"Splended to see you again\"", "\"Fantastic to see you again.\""]
 		elif self.desc_type == 'bad':

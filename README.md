@@ -1,14 +1,14 @@
 --- TODO ---
 
-- when player.is_inbattle() -> player.inspect(), player.attack(), player.move() do not require a noun
+<!-- - when player.is_inbattle() -> player.inspect(), player.attack(), player.move() do not require a noun
 	-player.inspect(self) only provides details about self and battle_opponent
 	-player.move(self) only attempts to run (based on ratio of speed)
 	- player.attack(self) means that the player attacked first (thus should try to hit first)
 - Change order of player/battle_opponent attack depending on who initiates battle (in player.attack())
 	- check if args in player.attack exists or not
-	- if exists, player attacks first; if not, battle_opponent attacks first
-- player.inspect()
-	- for env and for objects
+	- if exists, player attacks first; if not, battle_opponent attacks first -->
+<!-- - player.inspect()
+	- for env and for objects -->
 - class Items
 	- potions to start
 - player.inventory()
@@ -47,7 +47,6 @@
 19.12.23.0
 - villager dialogue
 	- added quotations
-
 
 19.12.21.0
 - world.get_input()
