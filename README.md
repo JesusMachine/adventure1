@@ -9,12 +9,23 @@
 	- if exists, player attacks first; if not, battle_opponent attacks first -->
 <!-- - player.inspect()
 	- for env and for objects -->
+- player.move(args)
+	- args if not in battle
 - class Items
-	- potions to start
-- player.inventory()
-	- implement player.inventory_add
-	- test self.inventory_print
+	- food and potions
+- class equipment
+	- weapons and armour
+- player.grab()
+	- removes item from environment
+	- adds key with item name to player.inventory_dict
+	- adds 1 to value for item key in player.inventory_dict
+- player.inventory_dict
 
+	- test self.inventory_print
+- world.get_input
+	- add grab
+	- add equip
+	- other player methods missing?
 
 
 
@@ -27,8 +38,8 @@
 	- keys = helm, torso, gauntlet, sword, etc
 	- values = items of type
 - class item.type()
-	- potions, helms, torso, gauntlet, sword etc 
-	- dictates where can be applied (or not if potion)
+	- perminent (adds to player stats)
+	- temporary (active for # of moves)
 - Multiple hits per attack
 	- player.attack() structure allows for player or opponent to hit multiple times (or none); make it so that if multiple speed ratio, attack multiple times.
 
@@ -44,6 +55,15 @@
 
 
 --- UPDATES ---
+19.12.23.1
+- started item class implementation
+- added but did not implement player.use, player.grab, player.equip
+- added player.location
+- implemented player.move() for non-battle case
+
+19.12.27.0
+- stuff
+
 19.12.23.0
 - villager dialogue
 	- added quotations

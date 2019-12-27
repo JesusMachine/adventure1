@@ -6,20 +6,21 @@ import time
 import random
 import math
 import re
+from copy import copy
 
 start_game = False
-
 class World(): # Global Container
+	size = (20,20)
 	def __init__(self):
-		self.map = self.create_world(20,20)
+		self.map = self.create_world(World.size)
 		self.writer = Writer()
 		self.env = None # Instant access to current environment (so you dont have to type a huge thing for actions)
 		self.player = Player('Fake') #TODO this must be changed eventually
 		self.new_game()
-	def create_world(self,m,n): # Populates world dict with mxn locations, each containing an environment
+	def create_world(self,world_size): # Populates world dict with mxn locations, each containing an environment
 		world_map = {}
-		for i in range(m):
-			for j in range(n):
+		for i in range(world_size[0]):
+			for j in range(world_size[1]):
 				env_type = 	random.choice(['village','desert','forest'])			
 				world_map[(i,j)] = Environment(env_type)
 		return world_map
@@ -61,9 +62,9 @@ class World(): # Global Container
 			self.writer.msg_slow('"Please help us, {}!"...'.format(self.player.name))
 			self.writer.clear_screen()
 			self.writer.msg_slow('You awake to find yourself in an unfamiliar forest.')
-			self.loop()
 		if not start_game:
 			player = Player('Jim')
+		self.loop()
 		pass
 	def help_menu(self):
 		if not self.player.is_inbattle: # TODO normal help menu
@@ -73,8 +74,8 @@ class World(): # Global Container
 		pass
 	def loop(self):
 		while self.player.is_alive:
-			self.get_input()
 			self.update()
+			self.get_input()
 		if not self.player.is_alive:
 			self.writer.msg_slow('You died a horrible, agonizing death... GAME OVER')
 	def get_input(self): # Basic Input System (Reader). # TODO Test ALL Features
@@ -99,24 +100,37 @@ class World(): # Global Container
 		while action_flag:
 			self.writer.msg_slow('What do you do?')
 			cmd = input(": ").lower().split()
-			action_word = cmd[0]
-			if cmd[1] == "to":
-				del cmd[1]
-			if (action_word in action_dict):
+			if not cmd:
+				self.writer.msg_slow('You must enter an action. For help, type "help".')
+				return
+			if (cmd[0] in action_dict): # Known action
+				action_word = cmd[0]
 				if len(cmd)>=2 and noun_flag:
+					if cmd[1] == "to":
+						del cmd[1]
 					noun = ''.join(cmd[1::])
 				elif action_word=="help" or action_word=="inventory":
 					noun_flag = False
 				action_flag = False
-			else: # unknown verb
-				self.writer.msg_slow("{} is an unknown action.".format(action_word))
+			else: # unknown action
+				self.writer.msg_slow("{} is an unknown action.".format(cmd[0]))
 				self.writer.msg_slow("Please enter a valid action.")
+				return
 			while noun_flag:
 				if action_word == "move":
-					name_list =["north","south","east","west"]
+					dir_list =["north","south","east","west"]
+					if noun in dir_list:
+						noun_flag = False
+						noun_object = noun
+					else:
+						self.writer.msg_slow(noun+" is not a direction. Which direction do you want to move?")
+						noun = ''.join(input(": ").lower().split())
+						if noun == "cancel":
+							action_flag = True
+							break
 				elif action_word == "use":
 					name_list = self.player.inventory_dict.keys()
-				if noun: # if noun has been defined
+				elif noun: # if noun has been defined
 					if noun in name_list: # TODO add player inventory to search (for use)
 						noun_object = [x for x in self.env.contents if x.name.lower()==noun][0]
 						noun_flag = False
@@ -138,6 +152,7 @@ class World(): # Global Container
 		else:
 			action_dict[action_word]()
 	def update(self): # Updates player and all environments, which then update all objects
+		self.env = self.map[(self.player.location[0],self.player.location[1])] # Change environment based on players current location
 		for value in self.map.values(): # Update environments
 			value.update()
 			if value.print_out.strip():
@@ -181,8 +196,19 @@ class Player(): # Player resides in world, NOT environment
 	def __init__(self,name):
 		self.name = name
 		self.t = 0
+		self.location = [0,0]
+
 		self.print_out =''
 		self.inventory_dict={}
+		self.equipment_dict={
+		'head':None,
+		'chest':None,
+		'hands':None,
+		'legs':None,
+		'feet':None,
+		'weapon':None
+		}
+
 		# State Flags
 		self.is_alive = True
 		self.is_inbattle = False
@@ -207,13 +233,14 @@ class Player(): # Player resides in world, NOT environment
 		pass
 	def print_add(self,msg):
 		self.print_out += '\n' + msg
+		pass
 	def inspect(self,*args): # TODO needs to provide who you're at battle with and what their condition is
-		if not args:
+		if not args: # In battle
 			self.print_add(self.battle_opponent.name)
 			for stat in [hp,strength,speed,defense]:
 				self.print_add('    '+str(stat)+': '+self.battle_opponent.stat)
 			# TODO provide qualitative information regarding current stats
-		else:
+		else: # Not in battle
 			inspect_object = args[0]
 			self.print_add(inspect_object.get_description())
 			# self.print_add()
@@ -290,14 +317,36 @@ class Player(): # Player resides in world, NOT environment
 		for key in self.inventory_dict.keys:
 			self.print_add(str(key)+':'+str(self.inventory_dict[key]))
 		pass
-	def inventory_add(self):# Adds items to self.inventory.dict
-
-		pass
-	def move(self, where): #TODO
+	def move(self, *args): #TODO
 		#TODO moves player to new location if it exists and if not in battle. If not, states there are mountains there. If in battle, calculates chances to run based on speed. ALSO adds 1 to time if successful.
-		pass
+		if args:
+			loc = copy(self.location)
+			if args[0]=='north':
+				loc[1] += 1
+			elif args[0]=='south':
+				loc[1] -= 1
+			elif args[0]=='east':
+				loc[0] += 1
+			elif args[0]=='west':
+				loc[0] -= 1
+			if loc[0]<0 or loc[1]<0 or loc[0]>World.size[0] or loc[1]>World.size[1]:
+				self.print_add('Your path is blocked by mountains to the '+args[0]+'.')
+			else:
+				self.location = loc
+				self.print_add('You move '+args[0]+' and find yourself in a new environment.')
+		else: # TODO attempt to run from battle
+			pass
 	def use(self,item): #TODO
-		#TODO activate item if it exists in players inventory
+		# Activate item (applies item stats to player) if it exists in players inventory
+		# deletes item after use
+		pass
+	def equip(self,equipment):
+		# Replaces current equipment type in player.equipment_dict with chosen
+		pass
+	def grab(self,item):#TODO
+		# Checks if item or equipment
+		# adds to player.inventory_dict
+		# Removes from environment
 		pass
 	def update(self):
 		self.create_description()
@@ -451,7 +500,10 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 		self.description = "it's "+self.adj1+ ', ' +self.adj2 +' '+self.name+'.'
 	def get_description(self):
 		if self.is_alive:
-			return self.init_description
+			if self.name_known:
+				return "it's " + self.adj1 + ", " + self.adj2 + " " + self.name
+			else:
+				return self.init_description
 		else:
 			return "While they once looked " + self.adj1 + " and " + self.adj2 + ", now you see a pile of organs, blood and meat. Perhaps some teeth."
 	def create_dialogue(self): # If positive, also add probability for a tip (tells you what is to the north/east/west/south)
@@ -483,8 +535,15 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 	def update(self):
 		if self.hp == 0:
 			self.is_alive = False
-class Item():
-	pass
+class Equipment():
+	def __init__(self):
+		pass
+class Item(): # Food / Potions
+	# Types = 
+	# potion (Temp Health), stimulant (Temp speed), steroid(Temp strength),
+	def __init__(self,name):
+		self.name = name
+	# All method will be taken care of with player.use() method
 
 def main():
 	world = World()
