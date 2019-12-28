@@ -26,7 +26,9 @@
 	- add grab
 	- add equip
 	- other player methods missing?
-
+- add self.xp give to
+	- monsters
+	- villagers (small amount still based on relative level)
 
 
 --- FUTUREDEV ---
@@ -47,15 +49,17 @@
 
 
 --- BUGS ---
-
+- Attacking pattern is not consistent (if you initiate, you do not always hit first)
 - entering unknown action for world.get_input() throws error and exits world.loop()
-- world.get_input() isnt right with the action_flag
-
+- world.get_input()
+	-cannot interact with multiple objects with same name (see line 142 for possible solution)
 
 
 
 --- UPDATES ---
-19.12.23.1
+19.12.27.2
+- added monster attack mechanism
+19.12.27.1
 - started item class implementation
 - added but did not implement player.use, player.grab, player.equip
 - added player.location

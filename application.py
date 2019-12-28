@@ -35,10 +35,16 @@ class World(): # Global Container
 			name = random.choice(Villager.names[pronoun])
 			attr = name, pronoun
 		elif thing_type == Monster:
-			# TODO - init settings for monster
+			base = random.choice(list(Monster.base.keys()))
+			modifier = random.choice(list(Monster.modifier.keys()))
+			attr = modifier, base
+			# TODO - base and modifier should be based on location/environment type, not random
 			pass
 		elif thing_type == Item:
-			#TODO
+			#TODO - create items
+			pass
+		elif thing_type == Equipment:
+			# TODO - create equipment type
 			pass
 		self.map[location].contents.append(thing_type(attr))
 		pass
@@ -46,6 +52,7 @@ class World(): # Global Container
 		self.place_gen((0,0),'forest') # Change this to world_gen later (Populates ALL of map with items and monsters - uses place_gen, then thing_gen)
 		self.env = self.map[(0,0)]
 		self.thing_gen((0,0),Villager)
+		self.thing_gen((0,0),Monster)
 		# TODO add static characters and environments here
 		# TODO add randomized characters and environments here
 		if start_game:
@@ -64,6 +71,7 @@ class World(): # Global Container
 			self.writer.msg_slow('You awake to find yourself in an unfamiliar forest.')
 		if not start_game:
 			player = Player('Jim')
+		self.update()
 		self.loop()
 		pass
 	def help_menu(self):
@@ -74,8 +82,8 @@ class World(): # Global Container
 		pass
 	def loop(self):
 		while self.player.is_alive:
-			self.update()
 			self.get_input()
+			self.update()
 		if not self.player.is_alive:
 			self.writer.msg_slow('You died a horrible, agonizing death... GAME OVER')
 	def get_input(self): # Basic Input System (Reader). # TODO Test ALL Features
@@ -96,7 +104,7 @@ class World(): # Global Container
 			name_list = [self.player.battle_opponent.name.lower()]
 			noun_flag = False
 		else:
-			name_list = [x.name.lower() for x in self.env.contents]
+			name_list = [''.join(x.name.lower().split()) for x in self.env.contents]
 		while action_flag:
 			self.writer.msg_slow('What do you do?')
 			cmd = input(": ").lower().split()
@@ -132,7 +140,7 @@ class World(): # Global Container
 					name_list = self.player.inventory_dict.keys()
 				elif noun: # if noun has been defined
 					if noun in name_list: # TODO add player inventory to search (for use)
-						noun_object = [x for x in self.env.contents if x.name.lower()==noun][0]
+						noun_object = [x for x in self.env.contents if ''.join(x.name.lower().split())==noun][0] # TODO this could be used for multiple of same name
 						noun_flag = False
 					elif action_word=="inspect" and noun=="environment":
 						noun_object = self.env
@@ -219,7 +227,7 @@ class Player(): # Player resides in world, NOT environment
 		self.hp = 10
 		self.strength = 1
 		self.speed = 1
-		self. defense = 1
+		self.defense = 1
 	def level_up(self): # Runs at the end of each action
 		lvl_start = self.level
 		self.level = int(math.sqrt(xp))
@@ -254,25 +262,21 @@ class Player(): # Player resides in world, NOT environment
 			attack_first = True
 		else: # NPC attacks first
 			attack_first = False
-
-
 		if not self.battle_opponent.is_alive:
 			self.print_add('You attack '+self.battle_opponent.name+"'s dead corpse. You get some blood and guts on yourself but nothing else happens.")
 			return
-
 		# Setup Settings
 		self.is_inbattle = True
 		self.battle_opponent.is_inbattle = True
 		p_hit = 0.8*self.speed / (self.battle_opponent.speed + self.speed)
 		p_gethit = 0.8*self.battle_opponent.speed / (self.battle_opponent.speed + self.speed)
-
 		#Damage Assignment
 		player_flag = True # TODO FUTUREDEV add multiple hits per turn depending on speed ratio
 		opponent_flag = True
 		while player_flag or opponent_flag:
 			if attack_first or not opponent_flag: # if player attacks first or opponent has already attacked
 				player_flag = False
-				hploss_give = round(random.uniform(0.5,1)*self.strength / self.battle_opponent.defense)
+				hploss_give = math.ceil(random.uniform(0.5,1)*self.strength / self.battle_opponent.defense)
 				hit = random.choices(population=[True,False],weights=[p_hit,1.0-p_hit])[0]
 				if hit:	
 					self.print_add('You hit '+self.battle_opponent.name+'.')
@@ -288,7 +292,7 @@ class Player(): # Player resides in world, NOT environment
 					return 
 			while opponent_flag: # Opponent attacks
 				opponent_flag  = False
-				hploss_take = round(random.uniform(0.5,1)*self.battle_opponent.strength / self.defense)
+				hploss_take = math.ceil(random.uniform(0.5,1)*self.battle_opponent.strength / self.defense)
 				get_hit = random.choices([True,False],weights=[p_gethit,1.0-p_gethit])[0]
 				if get_hit:
 					self.print_add('You were hit by '+self.battle_opponent.name+'.')
@@ -296,9 +300,8 @@ class Player(): # Player resides in world, NOT environment
 					self.hp-=hploss_take
 				else:
 					self.print_add(self.battle_opponent.name+' missed you.')
-				if self.hp <=0: # Player killed
+				if self.hp<=0:
 					return
-				pass
 	def talk(self, talk_object):
 		yousay = 'You say hi to '
 		if isinstance(talk_object, Villager):
@@ -350,9 +353,8 @@ class Player(): # Player resides in world, NOT environment
 		pass
 	def update(self):
 		self.create_description()
-		if self.hp == 0:
+		if self.hp <= 0:
 			self.is_alive = False
-		pass
 		# Always at end of update!
 		if not self.is_inbattle:
 			self.t += 1
@@ -394,6 +396,8 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 					description += 'a man... '
 				else:
 					description += 'a woman... '
+			if isinstance(x,Monster):
+				description += 'a ' + x.name + ', '
 			description += x.get_description()
 		return description
 	def update(self): # Updates all objects in environment
@@ -402,46 +406,54 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 			if x.print_out.strip(): # Check if there is a printout from object
 				self.print_out += x.print_out
 		pass
-class Monster(): # TODO cannot have 2 monsters with same name in environment, make a rename method to resolve (can be Elf1 and ELf2 or simply reroll)
-	mon_types = { # TODO addmore
-	'Elf',
-	'Goblin',
-	'Orc'
+class Monster():
+	base = {
+	'Rat': [1,1,1,1],
+	'Elf': [10,3,5,3],
+	'Goblin':[5,3,3,3],
+	'Orc': [20,5,3,4]
+	}
+	modifier = {
+	'Regular':[0,0,0,0],
+	'Dark': [-2,2,1,-1],
+	'High': [1,-2,0,1],
+	'Wood': [-2,-1,3,0],
+	'Beserker': [0,0,2,-2],
+	'Armored': [0,0,-2,2]
 	}
 	def __init__(self,args):
 		# State Flags
 		self.is_alive = True
 		self.is_inbattle = True
-
-
-		self.name = arg[1] + ' ' + arg[0]
+		self.base = args[1]
+		self.modifier = args[0]
+		self.name = self.modifier + ' ' + self.base
 		self.print_out = '' 
 		self.create_stats()
-		self.create_decription()
-	def create_stats(self,args):
+		self.create_description()
+	def create_stats(self):
 		# TODO - Monster stats are based on 1.) arg[0] (base stats) 2.) arg[1] (modifiers - add or subtract) 3.) player.level (multipliers)
 		# TODO - Add xp_give
-		# [hp,strength,speed,defense]
-		base = {
-		'Elf': [10,3,5,3],
-		'Goblin':[5,3,3,3],
-		'Orc': [20,5,3,4]
-		}
-		modifier = {
-		'Dark': [-2,2,0,-1],
-		'High': [1,-2,0,1],
-		'Wood': [-2,-1,3,0],
-		'Beserker': [0,0,2,-2],
-		'Armored': [0,0,-2,2]
-		}
-		# TODO
-		#  create stats => [round(x) for x in (player.level/4)*(base[arg[0]] + modifier[arg[1]])]
+		stats = [math.ceil(x) for x in (Monster.base[self.base] + Monster.modifier[self.modifier])]
+		self.hp = stats[0]
+		self.strength = stats[1]
+		self.speed = stats[2]
+		self.defense = stats[3]
 		pass
 	def create_description(self):
 		# TODO
 		pass
+	def get_description(self):
+		return "a big scary monster."# TODO - Change this
+		pass
+	def create_dialogue(self):
+		# TODO
+		pass
+	def get_dialogue(self):
+		# TODO
+		pass
 	def update(self):
-		if self.stats['hp'] ==0:
+		if self.hp <= 0:
 			self.is_alive == False
 class Villager(): # TODO cannot have 2 villagers with same name in environment, make a rename method to resolve (can be Jill1 and Jill2 or simply reroll)
 	names = {
@@ -454,7 +466,6 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 		self.name_known = False
 		self.is_inbattle = False
 
-		#
 		self.pronoun = args[1]
 		self.name = self.initial_name()
 		self.true_name = args[0] # name after name_know
@@ -547,7 +558,6 @@ class Item(): # Food / Potions
 
 def main():
 	world = World()
-	# world.thing_gen((0,0),Villager)
 	# print(world.env.name)
 	# print(world.env.contents[0].name) # Name of villager to attack
 	# world.loop()
