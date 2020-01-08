@@ -108,11 +108,17 @@ class World(): # Global Container
 		while action_flag:
 			self.writer.msg_slow('What do you do?')
 			cmd = input(": ").lower().split()
+			if cmd == ['eat','shit','and','die']: # Easteregg
+				self.writer.msg_slow('You ate some rancid feces.')
+				self.player.hp = 0
+				break
 			if not cmd:
 				self.writer.msg_slow('You must enter an action. For help, type "help".')
 				return
 			if (cmd[0] in action_dict): # Known action
 				action_word = cmd[0]
+				if action_word == "use":
+					name_list = list(self.player.inventory_dict.keys())
 				if len(cmd)>=2 and noun_flag:
 					if cmd[1] == "to":
 						del cmd[1]
@@ -136,8 +142,6 @@ class World(): # Global Container
 						if noun == "cancel":
 							action_flag = True
 							break
-				elif action_word == "use":
-					name_list = self.player.inventory_dict.keys()
 				elif noun: # if noun has been defined
 					if noun in name_list: # TODO add player inventory to search (for use)
 						noun_object = [x for x in self.env.contents if ''.join(x.name.lower().split())==noun][0] # TODO this could be used for multiple of same name
@@ -145,6 +149,10 @@ class World(): # Global Container
 					elif action_word=="inspect" and noun=="environment":
 						noun_object = self.env
 						noun_flag = False
+					elif action_word=="use":
+						self.writer.msg_slow('You don\'t have any ' + noun +'s in your inventory.' )
+						print('test1')
+						noun = None
 					else: # noun not in name list
 						self.writer.msg_slow("There is no " + noun + " here.")
 						noun = None
@@ -157,8 +165,11 @@ class World(): # Global Container
 						break # exit to action while loop
 		if noun:
 			action_dict[action_word](noun_object)
+		elif cmd == ['eat','shit','and','die']: # Easteregg
+			pass
 		else:
 			action_dict[action_word]()
+		print('Exit input') #!!!
 	def update(self): # Updates player and all environments, which then update all objects
 		self.env = self.map[(self.player.location[0],self.player.location[1])] # Change environment based on players current location
 		for value in self.map.values(): # Update environments
@@ -338,8 +349,28 @@ class Player(): # Player resides in world, NOT environment
 				self.location = loc
 				self.print_add('You move '+args[0]+' and find yourself in a new environment.')
 		else: # TODO attempt to run from battle
-			pass
+			p_run = 0.5*self.speed / (self.battle_opponent.speed + self.speed) # Chance to run
+			run = random.choices(population=[True,False],weights=[p_run,1.0-p_run])[0]
+			if run:
+				self.print_add('You successfully ran away from ' + self.battle_opponent.name + '.')
+				self.is_inbattle = True
+				self.battle_opponent.is_inbattle = True
+				self.battle_opponent = None
+			else:
+				self.print_add('You couldn\'t outrun ' + self.battle_opponent.name + '.')
+				self.get_attacked()
 	def use(self,item): #TODO
+		base = item.name.lower().split()[0]
+		modifier = item.name.lower().split()[1]
+		attr_val = gettattr(self,Item.use_type[base]) * Item.base_type[base]*Item.modifier_type[modifier] # Gets value of item modifying attr
+		setattr(self,self,Item.use_type[base],attr_val)
+		if self.inventory_dict[item]>1:
+			self.inventory_dict[item] -= 1 # reduce number of items by 1
+		else:
+			del self.inventory_dict[item]
+		if self.is_inbattle:
+			self.get_attacked()
+
 		# Activate item (applies item stats to player) if it exists in players inventory
 		# deletes item after use
 		pass
@@ -351,6 +382,18 @@ class Player(): # Player resides in world, NOT environment
 		# adds to player.inventory_dict
 		# Removes from environment
 		pass
+	def get_attacked(self):
+		p_gethit = 0.8*self.battle_opponent.speed / (self.battle_opponent.speed + self.speed)
+		hploss_take = math.ceil(random.uniform(0.5,1)*self.battle_opponent.strength / self.defense)
+		get_hit = random.choices([True,False],weights=[p_gethit,1.0-p_gethit])[0]
+		if get_hit:
+			self.print_add('You were hit by '+self.battle_opponent.name+'.')
+			self.print_add("You've lost "+str(hploss_take)+' hp.')
+			self.hp-=hploss_take
+		else:
+			self.print_add(self.battle_opponent.name+' missed you.')
+		if self.hp<=0:
+			return
 	def update(self):
 		self.create_description()
 		if self.hp <= 0:
@@ -418,7 +461,7 @@ class Monster():
 	'Dark': [-2,2,1,-1],
 	'High': [1,-2,0,1],
 	'Wood': [-2,-1,3,0],
-	'Beserker': [0,0,2,-2],
+	'Berserker': [0,0,2,-2],
 	'Armored': [0,0,-2,2]
 	}
 	def __init__(self,args):
@@ -550,7 +593,23 @@ class Equipment():
 	def __init__(self):
 		pass
 class Item(): # Food / Potions
-	# Types = 
+	use_type = {
+	'potion':'hp',
+	'stimulant': 'speed',
+	'steroid': 'strength',
+	'painkiller': 'defense'
+	}  # Fraction of amount to provide
+	base_type = {
+	'potion': 0.1,
+	'stimulant': 0.05,
+	'steroid': 0.05,
+	'painkiller': 0.05
+	}  # Fraction of amount to provide
+	modifier_type = {
+	'Regular': 1,
+	'Potent': 2,
+	'Mighty': 3
+	}
 	# potion (Temp Health), stimulant (Temp speed), steroid(Temp strength),
 	def __init__(self,name):
 		self.name = name

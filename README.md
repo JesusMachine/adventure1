@@ -9,26 +9,29 @@
 	- if exists, player attacks first; if not, battle_opponent attacks first -->
 <!-- - player.inspect()
 	- for env and for objects -->
-1. player.move(args)
-  * args if not in battle
-2. class Items
-  * food and potions
-3. class equipment
+<!-- * player.move(args)
+  * args if not in battle -->
+<!-- * class Items
+  * base and modifiers -->
+* class equipment
   * weapons and armour
-
-4. player.grab()
+* player.grab()
   * removes item from environment
-  * adds key with item name to player.inventory_dict
+  * adds key with item name to
+* world.thing_gen()
+  * add items for generation
+ player.inventory_dict
   * adds 1 to value for item key in player.inventory_dict
-5. player.inventory_dict
+* player.inventory_dict
   * test self.inventory_print
-6.  world.get_input
+*  world.get_input
   *  add grab
   *  add equip
   *  other player methods missing?
-7. add self.xp give to
+* add self.xp give to
   *  monsters
   *  villagers (small amount still based on relative level)
+* add modifier.types for items
 
 # FUTUREDEV
 * stats are dependent on health
@@ -42,13 +45,22 @@
   * temporary (active for # of moves)
 * Multiple hits per attack
   * player.attack() structure allows for player or opponent to hit multiple times (or none); make it so that if multiple speed ratio, attack multiple times.
+
 # BUGS
+* all cases where .split() results in noun being concatinated without spaces
 * Attacking pattern is not consistent (if you initiate, you do not always hit first)
-* entering unknown action for world.get_input() throws error and exits world.loop()
-* world.get_input()
-  * cannot interact with multiple objects with same name (see line 142 for possible solution)
+* cannot interact with multiple objects with same name (see line 142 for possible solution)
+
 # UPDATES
-*19.12.27.2
+* 20.01.07.0
+  * Added player.move() for battle
+    * Tested
+  * Added Item class
+  * Partially implemented player.use()
+    * did not check with item. Test noun works.
+  * Added player.get_attacked()
+  	* If player is in battle and does something besides attack, they will still get attacked
+* 19.12.27.2
   * added monster attack mechanism
 *19.12.27.1
   * started item class implementation
@@ -72,8 +84,8 @@
   * player.talk()
     * changed print()'s to self.print_add()
 * 19.12.15.1
-- Added player.inventory_dict, player.inventory_print()
-- Provided method for player.attack() to provide no input (args)
+  * Added player.inventory_dict, player.inventory_print()
+  * Provided method for player.attack() to provide no input (args)
 *  19.12.15.0
   * Added timecounter to player
   * Added object.print_out and env.print_out
