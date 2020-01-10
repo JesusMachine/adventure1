@@ -13,13 +13,11 @@
   * args if not in battle -->
 <!-- * class Items
   * base and modifiers -->
-* class equipment
-  * weapons and armour
+<!-- * world.thing_gen()
+  * add items for generation -->
 * player.grab()
   * removes item from environment
   * adds key with item name to
-* world.thing_gen()
-  * add items for generation
  player.inventory_dict
   * adds 1 to value for item key in player.inventory_dict
 * player.inventory_dict
@@ -28,12 +26,17 @@
   *  add grab
   *  add equip
   *  other player methods missing?
+* class equipment
+  * weapons and armour
 * add self.xp give to
   *  monsters
   *  villagers (small amount still based on relative level)
 * add modifier.types for items
 
 # FUTUREDEV
+* Item gen is based on weights
+  * both base and mod are weighted
+  * regular and potion most prevalent
 * stats are dependent on health
   *  if hurt, speed and strength are less
   * defense is static and only depends on level and equipment
@@ -47,11 +50,17 @@
   * player.attack() structure allows for player or opponent to hit multiple times (or none); make it so that if multiple speed ratio, attack multiple times.
 
 # BUGS
+* world.get_input()
+  * if noun is more than one word and not in name_list, system prints as one word, concatinated
 * all cases where .split() results in noun being concatinated without spaces
 * Attacking pattern is not consistent (if you initiate, you do not always hit first)
 * cannot interact with multiple objects with same name (see line 142 for possible solution)
 
 # UPDATES
+* 20.01.09.0
+  * Added and tested player.grab()
+  * Finshed implementing use and tested
+    * All item properties are administered by player.use
 * 20.01.07.0
   * Added player.move() for battle
     * Tested
@@ -62,17 +71,17 @@
   	* If player is in battle and does something besides attack, they will still get attacked
 * 19.12.27.2
   * added monster attack mechanism
-*19.12.27.1
+* 19.12.27.1
   * started item class implementation
   * added but did not implement player.use, player.grab, player.equip
   * added player.location
   * implemented player.move() for on-battle case
-*19.12.27.0
+* 19.12.27.0
   * stuff
-*19.12.23.0
+* 19.12.23.0
   * villager dialogue
     * added quotations
-*19.12.21.0
+* 19.12.21.0
   * world.get_input()
     *  added noun flag and separate while noun_flag
     * reorganized world.get_input() for one word or more input

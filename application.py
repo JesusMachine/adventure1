@@ -41,7 +41,9 @@ class World(): # Global Container
 			# TODO - base and modifier should be based on location/environment type, not random
 			pass
 		elif thing_type == Item:
-			#TODO - create items
+			base = random.choice(list(Item.base_type.keys()))
+			modifier = random.choice(list(Item.modifier_type.keys()))
+			attr = modifier, base
 			pass
 		elif thing_type == Equipment:
 			# TODO - create equipment type
@@ -51,8 +53,15 @@ class World(): # Global Container
 	def new_game(self):
 		self.place_gen((0,0),'forest') # Change this to world_gen later (Populates ALL of map with items and monsters - uses place_gen, then thing_gen)
 		self.env = self.map[(0,0)]
-		self.thing_gen((0,0),Villager)
-		self.thing_gen((0,0),Monster)
+
+		self.env.contents.append(Item(('Regular','Potion')))
+		self.env.contents.append(Item(('Regular','Potion')))
+		self.env.contents.append(Item(('Regular','Potion')))
+
+		# self.thing_gen((0,0),Villager) # TODO Remove later
+		# self.thing_gen((0,0),Monster) # TODO remove later
+		# self.thing_gen((0,0),Item)
+
 		# TODO add static characters and environments here
 		# TODO add randomized characters and environments here
 		if start_game:
@@ -94,6 +103,7 @@ class World(): # Global Container
 		"inventory":self.player.inventory_print, # no noun req
 		"move":self.player.move, # no noun req if in battle
 		"use":self.player.use, # noun req
+		"grab":self.player.grab, # noun req
 		"help": self.help_menu # no noun req
 		}
 		action_flag = True
@@ -118,7 +128,7 @@ class World(): # Global Container
 			if (cmd[0] in action_dict): # Known action
 				action_word = cmd[0]
 				if action_word == "use":
-					name_list = list(self.player.inventory_dict.keys())
+					name_list = [''.join(x.lower().split()) for x in list(self.player.inventory_dict.keys())]
 				if len(cmd)>=2 and noun_flag:
 					if cmd[1] == "to":
 						del cmd[1]
@@ -151,7 +161,6 @@ class World(): # Global Container
 						noun_flag = False
 					elif action_word=="use":
 						self.writer.msg_slow('You don\'t have any ' + noun +'s in your inventory.' )
-						print('test1')
 						noun = None
 					else: # noun not in name list
 						self.writer.msg_slow("There is no " + noun + " here.")
@@ -169,7 +178,6 @@ class World(): # Global Container
 			pass
 		else:
 			action_dict[action_word]()
-		print('Exit input') #!!!
 	def update(self): # Updates player and all environments, which then update all objects
 		self.env = self.map[(self.player.location[0],self.player.location[1])] # Change environment based on players current location
 		for value in self.map.values(): # Update environments
@@ -325,11 +333,18 @@ class Player(): # Player resides in world, NOT environment
 					yousay += 'the woman.'
 		self.print_add(yousay)
 		self.print_add(talk_object.get_dialogue())
-		talk_object.name_known = True
 		pass
 	def inventory_print(self): # Prints items in player.inventory_dict
-		for key in self.inventory_dict.keys:
-			self.print_add(str(key)+':'+str(self.inventory_dict[key]))
+		if bool(self.inventory_dict):
+			self.print_add('Your inventory contains:')
+			for x in list(self.inventory_dict.keys()):
+				if self.inventory_dict[x]>1:
+					modifier = 's'
+				else:
+					modifier = ''
+				self.print_add(str(self.inventory_dict[x]) + " " + x + modifier)
+		else:
+			self.print_add('Your inventory is empty.')
 		pass
 	def move(self, *args): #TODO
 		#TODO moves player to new location if it exists and if not in battle. If not, states there are mountains there. If in battle, calculates chances to run based on speed. ALSO adds 1 to time if successful.
@@ -360,14 +375,16 @@ class Player(): # Player resides in world, NOT environment
 				self.print_add('You couldn\'t outrun ' + self.battle_opponent.name + '.')
 				self.get_attacked()
 	def use(self,item): #TODO
-		base = item.name.lower().split()[0]
-		modifier = item.name.lower().split()[1]
-		attr_val = gettattr(self,Item.use_type[base]) * Item.base_type[base]*Item.modifier_type[modifier] # Gets value of item modifying attr
-		setattr(self,self,Item.use_type[base],attr_val)
-		if self.inventory_dict[item]>1:
-			self.inventory_dict[item] -= 1 # reduce number of items by 1
+		base = item.name.split()[1]
+		modifier = item.name.split()[0]
+		attr_increase = Item.base_type[base]*Item.modifier_type[modifier]
+		attr_val = getattr(self,Item.use_type[base]) + attr_increase # Gets value of item modifying attr
+		setattr(self,Item.use_type[base],attr_val)
+		self.print_add("You ingest the " + item.name + " and increase your " + Item.use_type[base] + " by " + str(attr_increase) + "!")
+		if self.inventory_dict[item.name]>1:
+			self.inventory_dict[item.name] -= 1 # reduce number of items by 1
 		else:
-			del self.inventory_dict[item]
+			del self.inventory_dict[item.name]
 		if self.is_inbattle:
 			self.get_attacked()
 
@@ -377,10 +394,16 @@ class Player(): # Player resides in world, NOT environment
 	def equip(self,equipment):
 		# Replaces current equipment type in player.equipment_dict with chosen
 		pass
-	def grab(self,item):#TODO
-		# Checks if item or equipment
-		# adds to player.inventory_dict
-		# Removes from environment
+	def grab(self,item):
+		if isinstance(item,Item):
+			item.in_inventory = True
+			if item.name in list(self.inventory_dict.keys()):
+				self.inventory_dict[item.name] += 1
+			else:
+				self.inventory_dict[item.name] = 1
+			self.print_add("You place the " + item.name + " in your inventory.")
+		else:
+			self.print_add("You can't pick up " + item + ".")
 		pass
 	def get_attacked(self):
 		p_gethit = 0.8*self.battle_opponent.speed / (self.battle_opponent.speed + self.speed)
@@ -448,6 +471,9 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 			x.update()
 			if x.print_out.strip(): # Check if there is a printout from object
 				self.print_out += x.print_out
+			if isinstance(x,Item) or isinstance(x,Equipment): # Check if item or equipment has been picked up
+				if x.in_inventory:
+					self.contents.remove(x)
 		pass
 class Monster():
 	base = {
@@ -583,6 +609,7 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 		return dialogue
 	def get_dialogue(self):
 		if self.is_alive:
+			self.name_known = True
 			return self.create_dialogue()
 		else:
 			return '"..." The bloody corpse says nothing back.'
@@ -594,16 +621,16 @@ class Equipment():
 		pass
 class Item(): # Food / Potions
 	use_type = {
-	'potion':'hp',
-	'stimulant': 'speed',
-	'steroid': 'strength',
-	'painkiller': 'defense'
+	'Potion':'hp',
+	'Stimulant': 'speed',
+	'Steroid': 'strength',
+	'Painkiller': 'defense'
 	}  # Fraction of amount to provide
 	base_type = {
-	'potion': 0.1,
-	'stimulant': 0.05,
-	'steroid': 0.05,
-	'painkiller': 0.05
+	'Potion': 0.1,
+	'Stimulant': 0.05,
+	'Steroid': 0.05,
+	'Painkiller': 0.05
 	}  # Fraction of amount to provide
 	modifier_type = {
 	'Regular': 1,
@@ -611,8 +638,27 @@ class Item(): # Food / Potions
 	'Mighty': 3
 	}
 	# potion (Temp Health), stimulant (Temp speed), steroid(Temp strength),
-	def __init__(self,name):
-		self.name = name
+	def __init__(self,args):
+		self.name_known = True
+		self.is_alive = True
+		self.in_inventory = False
+		self.print_out = ''
+
+		self.base = args[1]
+		self.modifier = args[0]
+		self.name = self.modifier + ' ' + self.base
+	def get_dialogue(self):
+		return self.name + " says nothing back."
+	def get_description(self):
+		if self.base == 'Potion':
+			adj = "permanently"
+		else:
+			adj = "temporarily"
+		return "a " + self.name + ". It " + adj + " gives you " + Item.use_type[self.base] + "." 
+	def update(self):
+		pass
+
+
 	# All method will be taken care of with player.use() method
 
 def main():
