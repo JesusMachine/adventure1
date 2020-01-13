@@ -15,7 +15,7 @@ class World(): # Global Container
 		self.map = self.create_world(World.size)
 		self.writer = Writer()
 		self.env = None # Instant access to current environment (so you dont have to type a huge thing for actions)
-		self.player = Player('Fake') #TODO this must be changed eventually
+		self.player = Player('Billy Bob Thornton') #TODO this must be changed eventually
 		self.new_game()
 	def create_world(self,world_size): # Populates world dict with mxn locations, each containing an environment
 		world_map = {}
@@ -54,12 +54,12 @@ class World(): # Global Container
 		self.place_gen((0,0),'forest') # Change this to world_gen later (Populates ALL of map with items and monsters - uses place_gen, then thing_gen)
 		self.env = self.map[(0,0)]
 
-		self.env.contents.append(Item(('Regular','Potion')))
-		self.env.contents.append(Item(('Regular','Potion')))
-		self.env.contents.append(Item(('Regular','Potion')))
+		# self.env.contents.append(Item(('Regular','Potion')))
+		# self.env.contents.append(Item(('Regular','Potion')))
+		# self.env.contents.append(Item(('Regular','Potion')))
 
 		# self.thing_gen((0,0),Villager) # TODO Remove later
-		# self.thing_gen((0,0),Monster) # TODO remove later
+		self.thing_gen((0,0),Monster) # TODO remove later
 		# self.thing_gen((0,0),Item)
 
 		# TODO add static characters and environments here
@@ -111,6 +111,7 @@ class World(): # Global Container
 		noun = None
 		if self.player.is_inbattle: # Remove certain choices (and change help menu) if in battle
 			del action_dict['talk']
+			del action_dict['grab']
 			name_list = [self.player.battle_opponent.name.lower()]
 			noun_flag = False
 		else:
@@ -118,7 +119,7 @@ class World(): # Global Container
 		while action_flag:
 			self.writer.msg_slow('What do you do?')
 			cmd = input(": ").lower().split()
-			if cmd == ['eat','shit','and','die']: # Easteregg
+			if cmd == ['eat','shit','and','die']: # Easter egg
 				self.writer.msg_slow('You ate some rancid feces.')
 				self.player.hp = 0
 				break
@@ -129,6 +130,7 @@ class World(): # Global Container
 				action_word = cmd[0]
 				if action_word == "use":
 					name_list = [''.join(x.lower().split()) for x in list(self.player.inventory_dict.keys())]
+					noun_flag = True
 				if len(cmd)>=2 and noun_flag:
 					if cmd[1] == "to":
 						del cmd[1]
@@ -263,9 +265,10 @@ class Player(): # Player resides in world, NOT environment
 		pass
 	def inspect(self,*args): # TODO needs to provide who you're at battle with and what their condition is
 		if not args: # In battle
-			self.print_add(self.battle_opponent.name)
-			for stat in [hp,strength,speed,defense]:
-				self.print_add('    '+str(stat)+': '+self.battle_opponent.stat)
+			for character in [self, self.battle_opponent]:
+				self.print_add(character.name)
+				for stat in ['hp','strength','speed','defense']:
+					self.print_add('    '+stat+': '+str(getattr(character,stat)))
 			# TODO provide qualitative information regarding current stats
 		else: # Not in battle
 			inspect_object = args[0]
@@ -464,6 +467,8 @@ class Environment(): # Local Container -- Contains all Monsters, Villagers, Item
 					description += 'a woman... '
 			if isinstance(x,Monster):
 				description += 'a ' + x.name + ', '
+			if isinstance(x,Item):
+				description += 'a ' + x.name + '.'
 			description += x.get_description()
 		return description
 	def update(self): # Updates all objects in environment
@@ -627,10 +632,10 @@ class Item(): # Food / Potions
 	'Painkiller': 'defense'
 	}  # Fraction of amount to provide
 	base_type = {
-	'Potion': 0.1,
-	'Stimulant': 0.05,
-	'Steroid': 0.05,
-	'Painkiller': 0.05
+	'Potion': 1,
+	'Stimulant': 0.5,
+	'Steroid': 0.5,
+	'Painkiller': 0.5
 	}  # Fraction of amount to provide
 	modifier_type = {
 	'Regular': 1,
@@ -647,6 +652,7 @@ class Item(): # Food / Potions
 		self.base = args[1]
 		self.modifier = args[0]
 		self.name = self.modifier + ' ' + self.base
+		self.points = Item.base_type[self.base]*Item.modifier_type[self.modifier]
 	def get_dialogue(self):
 		return self.name + " says nothing back."
 	def get_description(self):
@@ -654,7 +660,7 @@ class Item(): # Food / Potions
 			adj = "permanently"
 		else:
 			adj = "temporarily"
-		return "a " + self.name + ". It " + adj + " gives you " + Item.use_type[self.base] + "." 
+		return " It " + adj + " gives you " + str(self.points) + ' ' + Item.use_type[self.base] + "." 
 	def update(self):
 		pass
 

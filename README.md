@@ -15,6 +15,9 @@
   * base and modifiers -->
 <!-- * world.thing_gen()
   * add items for generation -->
+* make inspect is_inbattle provide:
+  * player.hp, or description based on hp
+  * battle_opponent.hp, or description based on hp
 * player.grab()
   * removes item from environment
   * adds key with item name to
@@ -34,6 +37,8 @@
 * add modifier.types for items
 
 # FUTUREDEV
+* Rewrite world.get_input
+  * Cases are a mess
 * Item gen is based on weights
   * both base and mod are weighted
   * regular and potion most prevalent
@@ -55,8 +60,15 @@
 * all cases where .split() results in noun being concatinated without spaces
 * Attacking pattern is not consistent (if you initiate, you do not always hit first)
 * cannot interact with multiple objects with same name (see line 142 for possible solution)
+  * see "TODO this could be used for multiple of same name noun_flag = False"
 
 # UPDATES
+* 20.01.12.0
+  * Fixed using items in battle bug
+  * Deleted action "grab" if is_inbattle
+  * Fully implemented player.inspect for battle
+    * Displays players stats and enemy stats
+    * No noun necessary when in battle
 * 20.01.09.0
   * Added and tested player.grab()
   * Finshed implementing use and tested
