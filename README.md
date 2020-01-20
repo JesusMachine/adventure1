@@ -15,28 +15,41 @@
   * base and modifiers -->
 <!-- * world.thing_gen()
   * add items for generation -->
-* make inspect is_inbattle provide:
+<!-- * make inspect is_inbattle provide:
   * player.hp, or description based on hp
-  * battle_opponent.hp, or description based on hp
-* player.grab()
+  * battle_opponent.hp, or description based on hp -->
+<!-- * player.grab()
   * removes item from environment
-  * adds key with item name to
- player.inventory_dict
+  * adds key with item name to -->
+<!--  player.inventory_dict
   * adds 1 to value for item key in player.inventory_dict
 * player.inventory_dict
-  * test self.inventory_print
-*  world.get_input
-  *  add grab
-  *  add equip
-  *  other player methods missing?
+  * test self.inventory_print -->
 * class equipment
   * weapons and armour
+*  world.get_input
+<!--   *  add grab -->
+  *  add player.equip
+<!--   *  other player methods missing? -->
 * add self.xp give to
   *  monsters
   *  villagers (small amount still based on relative level)
-* add modifier.types for items
+<!-- * add modifier.types for items -->
 
 # FUTUREDEV
+* Make all items besides potions temporary
+  * only last x delta_t
+* Create method so that player can see where they are in map
+  * player.map
+* Change equipment to provide multiple stats
+  * Swords would provide more speed but maces would provide more strength
+* Add equipment and item weights
+  * adds to player.weight
+  * player.speed is based on player.weight
+* Create plot
+  * need preset characters, environments
+  * Create bosses Class
+  * Key items Class which allow progress of storyline
 * Rewrite world.get_input
   * Cases are a mess
 * Item gen is based on weights
@@ -53,8 +66,12 @@
   * temporary (active for # of moves)
 * Multiple hits per attack
   * player.attack() structure allows for player or opponent to hit multiple times (or none); make it so that if multiple speed ratio, attack multiple times.
+* Split different sections into different modules
+  * too confusing and scattered in total
 
 # BUGS
+* Certain villager.desc_type = bad do not provide villager name
+  * yet name_known = True
 * world.get_input()
   * if noun is more than one word and not in name_list, system prints as one word, concatinated
 * all cases where .split() results in noun being concatinated without spaces
@@ -63,6 +80,10 @@
   * see "TODO this could be used for multiple of same name noun_flag = False"
 
 # UPDATES
+* 20.01.19.0
+  * Added equipment class
+  * Added but did not check player.equip
+  * 
 * 20.01.12.0
   * Fixed using items in battle bug
   * Deleted action "grab" if is_inbattle

@@ -24,7 +24,7 @@ class World(): # Global Container
 				env_type = 	random.choice(['village','desert','forest'])			
 				world_map[(i,j)] = Environment(env_type)
 		return world_map
-	def place_gen(self,location,env_type): # Creates an environment in a world location
+	def place_gen(sn elf,location,env_type): # Creates an environment in a world location
 		self.map[location] = Environment(env_type)
 		pass
 	def thing_gen(self,location,thing_type): # Creates a thing in an environment
@@ -54,11 +54,11 @@ class World(): # Global Container
 		self.place_gen((0,0),'forest') # Change this to world_gen later (Populates ALL of map with items and monsters - uses place_gen, then thing_gen)
 		self.env = self.map[(0,0)]
 
-		# self.env.contents.append(Item(('Regular','Potion')))
-		# self.env.contents.append(Item(('Regular','Potion')))
-		# self.env.contents.append(Item(('Regular','Potion')))
+		self.env.contents.append(Item(('Regular','Potion')))
+		self.env.contents.append(Item(('Regular','Potion')))
+		self.env.contents.append(Item(('Regular','Potion')))
 
-		# self.thing_gen((0,0),Villager) # TODO Remove later
+		self.thing_gen((0,0),Villager) # TODO Remove later
 		self.thing_gen((0,0),Monster) # TODO remove later
 		# self.thing_gen((0,0),Item)
 
@@ -101,6 +101,7 @@ class World(): # Global Container
 		"attack":self.player.attack, # no noun req if in battle
 		"talk":self.player.talk, # noun req
 		"inventory":self.player.inventory_print, # no noun req
+		"equip":self.player.equip, # Known req
 		"move":self.player.move, # no noun req if in battle
 		"use":self.player.use, # noun req
 		"grab":self.player.grab, # noun req
@@ -378,27 +379,48 @@ class Player(): # Player resides in world, NOT environment
 				self.print_add('You couldn\'t outrun ' + self.battle_opponent.name + '.')
 				self.get_attacked()
 	def use(self,item): #TODO
-		base = item.name.split()[1]
-		modifier = item.name.split()[0]
-		attr_increase = Item.base_type[base]*Item.modifier_type[modifier]
-		attr_val = getattr(self,Item.use_type[base]) + attr_increase # Gets value of item modifying attr
-		setattr(self,Item.use_type[base],attr_val)
-		self.print_add("You ingest the " + item.name + " and increase your " + Item.use_type[base] + " by " + str(attr_increase) + "!")
-		if self.inventory_dict[item.name]>1:
-			self.inventory_dict[item.name] -= 1 # reduce number of items by 1
-		else:
-			del self.inventory_dict[item.name]
-		if self.is_inbattle:
-			self.get_attacked()
-
+		if isinstance(item,Item):
+			base = item.name.split()[1]
+			modifier = item.name.split()[0]
+			attr_increase = Item.base_type[base]*Item.modifier_type[modifier]
+			attr_val = getattr(self,Item.use_type[base]) + attr_increase # Gets value of item modifying attr
+			setattr(self,Item.use_type[base],attr_val)
+			self.print_add("You ingest the " + item.name + " and increase your " + Item.use_type[base] + " by " + str(attr_increase) + "!")
+			if self.inventory_dict[item.name]>1:
+				self.inventory_dict[item.name] -= 1 # reduce number of items by 1
+			else:
+				del self.inventory_dict[item.name]
+			if self.is_inbattle:
+				self.get_attacked()
+		if isinstance(item,Equipement):
+			self.print_add('You must equip '+item+'.')
 		# Activate item (applies item stats to player) if it exists in players inventory
 		# deletes item after use
 		pass
 	def equip(self,equipment):
-		# Replaces current equipment type in player.equipment_dict with chosen
+		# Replaces current equipment type in player.equipment_dict with chosen (points added)
+		# Formerly equip is moved to inventory (points removed)
+		if isinstance(equipment, Equipment):
+			equip_type = Equipment.use_type[equipment.base][0]
+			equip_stat_type = Equipment.use_type[equipment.base][1]
+			old_equip = self.equipment_dict[equip_type]
+			if old_equip:
+				old_equip_stat_type = Equipment.use_type[old_equip.base][1]
+				old_points = getattr(old_equip_stat_type)
+				setattr(old_equip_stat_type,old_points - old_equip.points)
+				old_equip.is_equip = False
+				old_equip.in_inventory = True
+				self.grab(old_equip)
+			equipment.is_equip = True
+			equipment.in_inventory = False
+			self.equipment_dict[equip_type] = equipment
+			points = getattr(equip_stat_type)
+			setattr(equip_stat_type,points + equipment.points)
+		else:
+			self.print_add("You cannot equip "+equipment +'.')
 		pass
 	def grab(self,item):
-		if isinstance(item,Item):
+		if isinstance(item,Item) or isinstance(item,Equipment):
 			item.in_inventory = True
 			if item.name in list(self.inventory_dict.keys()):
 				self.inventory_dict[item.name] += 1
@@ -622,8 +644,55 @@ class Villager(): # TODO cannot have 2 villagers with same name in environment, 
 		if self.hp == 0:
 			self.is_alive = False
 class Equipment():
+	use_type = {
+	'head' = 'defense',
+	'chest' = 'defense',
+	'hands' = 'defense',
+	'legs' = 'defense',
+	'feet' = 'speed',
+	'weapon' = 'strength'
+	}
+	base_list = { # Base list provides where the equipment goes, and how much it provides
+	'hat': ['head',1],
+	'helmet': ['head',3],
+	'shirt': ['chest',1],
+	'breastplate': ['chest',3]
+	'gloves': ['hands',1],
+	'gauntlets': ['hands,'1],
+	'pants':['legs',1],
+	'legplate': ['legs',3],
+	'shoes':['feet',1],
+	'boots': ['feet',3]
+	'rod': ['weapon',1]
+	'sword': ['weapon',3]
+	}
+	material_list = {
+	'leather': 1,
+	'wooden': 1,
+	'iron': 3,
+	'steel': 5,
+	'mithril': 10
+	}
+	quality_list = {
+	'damaged': 0.5,
+	'worn': 0.75,
+	'fair': 1.0,
+	'pristine': 1.25,
+	'unique': 1.5
+	}
 	def __init__(self):
-		pass
+		## Base, Material, and Quality
+		self.name_known = True
+		self.is_alive = True
+		self.in_inventory = False
+		self.is_equip = False
+		self.print_out = ''
+
+		self.base = args[2] # 
+		self.material = args[1]
+		self.quality = args[0]
+		self.name = self.quality + ' ' +self.material + ' ' + self.base
+		self.points = Equipment.base_list[self.base][1]*Equipment.material_list[self.material]*Equipment.quality_list[self.quality]
 class Item(): # Food / Potions
 	use_type = {
 	'Potion':'hp',
@@ -639,8 +708,8 @@ class Item(): # Food / Potions
 	}  # Fraction of amount to provide
 	modifier_type = {
 	'Regular': 1,
-	'Potent': 2,
-	'Mighty': 3
+	'Potent': 5,
+	'Mighty': 10
 	}
 	# potion (Temp Health), stimulant (Temp speed), steroid(Temp strength),
 	def __init__(self,args):
